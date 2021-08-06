@@ -182,7 +182,6 @@ module mycpu_core(
         .cache_v (icache_cached )
     );
     
-
     cache_tag_v5 u_icache_tag(
     	.clk        (clk        ),
         .rst        (rst        ),
@@ -201,22 +200,6 @@ module mycpu_core(
         .lru        (icache_lru        )
     );
 
-    // cache_tag u_icache_tag(
-    // 	.clk        (clk        ),
-    //     .rst        (rst        ),
-    //     .stallreq   (stallreq_from_icache   ),
-    //     .cached     (1'b1     ),
-    //     .sram_en    (inst_sram_en    ),
-    //     .sram_wen   (inst_sram_wen   ),
-    //     .sram_addr  (inst_sram_addr  ),
-    //     .refresh    (icache_refresh    ),
-    //     .miss       (icache_miss       ),
-    //     .axi_raddr  (icache_raddr  ),
-    //     .write_back (icache_write_back ),
-    //     .axi_waddr  (icache_waddr  ),
-    //     .hit        (icache_hit        )
-    // );
-
     cache_data_v5 u_icache_data(
     	.clk           (clk           ),
         .rst           (rst           ),
@@ -233,22 +216,6 @@ module mycpu_core(
         .cacheline_new (icache_cacheline_new ),
         .cacheline_old (icache_cacheline_old )
     );
-    
-    // cache_data u_icache_data(
-    // 	.clk           (clk           ),
-    //     .rst           (rst           ),
-    //     .write_back    (1'b0    ),
-    //     .hit           (icache_hit           ),
-    //     .cached        (1'b1        ),
-    //     .sram_en       (inst_sram_en       ),
-    //     .sram_wen      (inst_sram_wen      ),
-    //     .sram_addr     (inst_sram_addr     ),
-    //     .sram_wdata    (inst_sram_wdata    ),
-    //     .sram_rdata    (inst_sram_rdata    ),
-    //     .refresh       (icache_refresh       ),
-    //     .cacheline_new (icache_cacheline_new ),
-    //     .cacheline_old (icache_cacheline_old )
-    // );
 
     wire [31:0] data_sram_addr_mmu;
     wire [31:0] dcache_temp_rdata;
@@ -277,21 +244,6 @@ module mycpu_core(
         .lru        (dcache_lru        )
     );
     
-    // cache_tag u_dcache_tag(
-    // 	.clk        (clk        ),
-    //     .rst        (rst        ),
-    //     .stallreq   (stallreq_from_dcache   ),
-    //     .cached     (dcache_cached     ),
-    //     .sram_en    (data_sram_en    ),
-    //     .sram_wen   (data_sram_wen   ),
-    //     .sram_addr  (data_sram_addr_mmu  ),
-    //     .refresh    (dcache_refresh    ),
-    //     .miss       (dcache_miss       ),
-    //     .axi_raddr  (dcache_raddr  ),
-    //     .write_back (dcache_write_back ),
-    //     .axi_waddr  (dcache_waddr  ),
-    //     .hit        (dcache_hit        )
-    // );
     cache_data_v5 u_dcache_data(
     	.clk           (clk           ),
         .rst           (rst           ),
@@ -308,22 +260,6 @@ module mycpu_core(
         .cacheline_new (dcache_cacheline_new ),
         .cacheline_old (dcache_cacheline_old )
     );
-    
-    // cache_data u_dcache_data(
-    // 	.clk           (clk           ),
-    //     .rst           (rst           ),
-    //     .write_back    (dcache_write_back    ),
-    //     .hit           (dcache_hit           ),
-    //     .cached        (dcache_cached        ),
-    //     .sram_en       (data_sram_en       ),
-    //     .sram_wen      (data_sram_wen      ),
-    //     .sram_addr     (data_sram_addr_mmu     ),
-    //     .sram_wdata    (data_sram_wdata    ),
-    //     .sram_rdata    (dcache_temp_rdata   ),
-    //     .refresh       (dcache_refresh       ),
-    //     .cacheline_new (dcache_cacheline_new ),
-    //     .cacheline_old (dcache_cacheline_old )
-    // );
     
     uncache_tag u_uncache_tag(
     	.clk       (clk       ),
