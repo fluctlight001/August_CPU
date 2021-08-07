@@ -10,7 +10,8 @@ module dt(
 
     output reg [`DT_TO_DC_WD-1:0] dt_to_dc_bus,
     output wire        data_sram_en   ,
-    output wire [ 3:0] data_sram_wen  ,
+    output wire        data_sram_wen  ,
+    output wire [ 3:0] data_sram_sel  ,
     output wire [31:0] data_sram_addr ,
     output wire [31:0] data_sram_wdata
 );
@@ -38,6 +39,7 @@ module dt(
     assign {
         data_sram_en,
         data_sram_wen,
+        data_sram_sel,
         data_sram_addr,
         data_sram_wdata
     } = ex_dt_sram_bus_r;

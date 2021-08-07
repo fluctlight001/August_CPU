@@ -370,79 +370,125 @@ module ex (
         inst_sw
     } = data_ram_wen[2:0];
 
-    // wire sb_sel1, sb_sel2, sb_sel3, sb_sel4;
-    // wire sh_sel1, sh_sel2;
-    // wire sw_sel;
+    wire inst_lb, inst_lbu, inst_lh, inst_lhu, inst_lw;
+    assign {
+        inst_lb,
+        inst_lbu,
+        inst_lh,
+        inst_lhu,
+        inst_lw
+    } = mem_op;
 
-    // assign sb_sel1 = inst_sb & ~alu_result[1] & ~alu_result[0];
-    // assign sb_sel2 = inst_sb & ~alu_result[1] & alu_result[0];
-    // assign sb_sel3 = inst_sb & alu_result[1] & ~alu_result[0];
-    // assign sb_sel4 = inst_sb & alu_result[1] & alu_result[0];
-
-    // assign sh_sel1 = inst_sh & ~alu_result[1] & ~alu_result[0];
-    // assign sh_sel2 = inst_sh & alu_result[1] & ~alu_result[0];
-
-    reg [3:0] data_sram_wen_r;
+    reg data_sram_wen_r;
+    reg [3:0] data_sram_sel_r;
     reg [31:0] data_sram_wdata_r;
     
     always @ (*) begin
         case(1'b1)
+            inst_lb,inst_lbu:begin
+                data_sram_wen_r <= 1'b0;
+                data_sram_wdata_r <= 32'b0;
+                case(alu_result[1:0])
+                    2'b00:begin
+                        data_sram_sel_r = 4'b0001;
+                    end
+                    2'b01:begin
+                        data_sram_sel_r = 4'b0010;
+                    end
+                    2'b10:begin
+                        data_sram_sel_r = 4'b0100;
+                    end
+                    2'b11:begin
+                        data_sram_sel_r = 4'b1000;
+                    end
+                    default:begin
+                        data_sram_sel_r = 4'b0;
+                    end
+                endcase
+            end
+            inst_lh,inst_lhu:begin
+                data_sram_wen_r <= 1'b0;
+                data_sram_wdata_r <= 32'b0;
+                case(alu_result[1:0])
+                    2'b00:begin
+                        data_sram_sel_r = 4'b0011;
+                    end
+                    2'b10:begin
+                        data_sram_sel_r = 4'b1100;
+                    end
+                    default:begin
+                        data_sram_sel_r = 4'b0000;
+                    end
+                endcase
+            end
+            inst_lw:begin
+                data_sram_wen_r <= 1'b0;
+                data_sram_wdata_r <= 32'b0;
+                data_sram_sel_r = 4'b1111;
+            end
             inst_sb:begin
+                data_sram_wen_r <= 1'b1;
                 data_sram_wdata_r = {4{rf_rdata2_bp[7:0]}};
                 case(alu_result[1:0])
                     2'b00:begin
-                        data_sram_wen_r = 4'b0001;
+                        data_sram_sel_r = 4'b0001;
                     end
                     2'b01:begin
-                        data_sram_wen_r = 4'b0010;
+                        data_sram_sel_r = 4'b0010;
                     end
                     2'b10:begin
-                        data_sram_wen_r = 4'b0100;
+                        data_sram_sel_r = 4'b0100;
                     end
                     2'b11:begin
-                        data_sram_wen_r = 4'b1000;
+                        data_sram_sel_r = 4'b1000;
                     end
                     default:begin
-                        data_sram_wen_r = 4'b0;
+                        data_sram_sel_r = 4'b0;
                     end
                 endcase
             end
             inst_sh:begin
+                data_sram_wen_r <= 1'b1;
                 data_sram_wdata_r = {2{rf_rdata2_bp[15:0]}};
                 case(alu_result[1:0])
                     2'b00:begin
-                        data_sram_wen_r = 4'b0011;
+                        data_sram_sel_r = 4'b0011;
                     end
                     2'b10:begin
-                        data_sram_wen_r = 4'b1100;
+                        data_sram_sel_r = 4'b1100;
                     end
                     default:begin
-                        data_sram_wen_r = 4'b0000;
+                        data_sram_sel_r = 4'b0000;
                     end
                 endcase
             end
             inst_sw:begin
+                data_sram_wen_r <= 1'b1;
                 data_sram_wdata_r = rf_rdata2_bp;
-                data_sram_wen_r = 4'b1111;
+                data_sram_sel_r = 4'b1111;
             end
             default:begin
+                data_sram_wen_r <= 1'b0;
                 data_sram_wdata_r = 32'b0;
-                data_sram_wen_r = 4'b0000;
+                data_sram_sel_r = 4'b0000;
             end
         endcase
     end
     wire        data_sram_en   ;
-    wire [ 3:0] data_sram_wen  ;
+    wire        data_sram_wen  ;
+    wire [ 3:0] data_sram_sel  ;
     wire [31:0] data_sram_addr ;
     wire [31:0] data_sram_wdata;
     assign data_sram_en = (|excepttype_o)|stop_store ? 1'b0 : data_ram_en;
     assign data_sram_wen = data_sram_wen_r;
+    assign data_sram_sel = data_sram_sel_r;
     assign data_sram_addr = alu_result; 
     assign data_sram_wdata = data_sram_wdata_r;
 
     assign ex_dt_sram_bus = {
-        data_sram_en,   // 68
-        data_sram_wen,   // 67:64
+        data_sram_en,   // 69
+        data_sram_wen,  // 68
+        data_sram_sel,  // 67:64
         data_sram_addr, // 63:32
         data_sram_wdata // 31:0
     };
@@ -632,14 +678,7 @@ module ex (
     assign ovassert = alu_op[13] & ov_sum;
 
     // loadassert
-    wire inst_lb, inst_lbu, inst_lh, inst_lhu, inst_lw;
-    assign {
-        inst_lb,
-        inst_lbu,
-        inst_lh,
-        inst_lhu,
-        inst_lw
-    } = mem_op;
+    
     assign loadassert = (inst_lh|inst_lhu) & alu_result[0]
                       | (inst_lw) & (alu_result[1]|alu_result[0]);
     assign storeassert = (inst_sh) & alu_result[0] 

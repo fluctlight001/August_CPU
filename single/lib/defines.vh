@@ -170,7 +170,7 @@
 `define DC_TO_MEM_WD 250
 `define MEM_TO_WB_WD 271
 `define BR_WD 33
-`define DATA_SRAM_WD 69
+`define DATA_SRAM_WD 70
 // `define BHR_WD 4
 // `define EX_BPU_WD 70
 

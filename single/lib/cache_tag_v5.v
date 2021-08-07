@@ -11,7 +11,6 @@ module cache_tag_v5(
 
     // sram_port
     input wire sram_en,
-    input wire [3:0] sram_wen,
     input wire [31:0] sram_addr,
     // input wire [31:0] sram_wdata,
     // output wire [31:0] sram_rdata,

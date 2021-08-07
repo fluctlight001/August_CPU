@@ -31,7 +31,8 @@ module axi_control_v5(
 
     // uncache  interface
     input wire uncache_en,
-    input wire [3:0] uncache_wen,
+    input wire uncache_wen,
+    input wire [3:0] uncache_sel,
     input wire [31:0] uncache_addr,
     input wire [31:0] uncache_wdata,
     output reg [31:0] uncache_rdata,
@@ -100,7 +101,8 @@ module axi_control_v5(
     reg dcache_wen_buffer;
     
     reg uncache_en_buffer;
-    reg [3:0] uncache_wen_buffer;
+    reg uncache_wen_buffer;
+    reg [3:0] uncache_sel_buffer;
     reg [31:0] uncache_addr_buffer;
     reg [31:0] uncache_wdata_buffer; 
     reg [31:0] uncache_rdata_buffer;
@@ -154,10 +156,10 @@ module axi_control_v5(
                     uncache_addr_buffer <= uncache_addr;
                     uncache_wdata_buffer <= uncache_wdata;
 
-                    if (dcache_wen|(uncache_en&((|uncache_wen)))) begin
+                    if (dcache_wen|uncache_wen) begin
                         stage <= stage << 1;    
                     end
-                    else if (icache_ren|dcache_ren|(uncache_en&~(|uncache_wen))) begin
+                    else if (icache_ren|dcache_ren|(uncache_en&~uncache_wen)) begin
                         stage <= stage << 2;
                     end
                 end
@@ -165,7 +167,7 @@ module axi_control_v5(
                     icache_wdata_buffer <= icache_cacheline_old;
                     dcache_wdata_buffer <= dcache_cacheline_old;
                     // uncache_wdata_buffer <= uncache_wdata;
-                    if (icache_ren_buffer|dcache_ren_buffer|(uncache_en_buffer&~(|uncache_wen_buffer))) begin
+                    if (icache_ren_buffer|dcache_ren_buffer|(uncache_en_buffer&~uncache_wen_buffer)) begin
                         stage <= stage << 1;
                     end
                     else begin
@@ -216,11 +218,25 @@ module axi_control_v5(
 
                         stage <= stage << 1;
                     end
-                    else if (uncache_en_buffer&~(|uncache_wen_buffer)) begin
+                    else if (uncache_en_buffer&~uncache_wen_buffer) begin
                         arid <= 4'b1;
                         araddr <= uncache_addr_buffer;
                         arlen <= 4'b0;
-                        arsize <= 3'b010;
+                        case (uncache_sel_buffer)
+                            4'b0001,4'b0010,4'b0100,4'b1000:begin
+                                arsize <= 3'b000; 
+                            end
+                            4'b0011,4'b1100:begin
+                                arsize <= 3'b001;
+                            end
+                            4'b1111:begin
+                                arsize <= 3'b010;
+                            end
+                            default:begin
+                                arsize <= 3'b010;
+                            end
+                        endcase
+                        // arsize <= 3'b010;
                         arvalid <= 1'b1;
                         stage <= stage << 3;
                     end
@@ -332,26 +348,23 @@ module axi_control_v5(
                             dcache_offset_w <= 4'b0;
                             stage_w <= stage_w << 1;
                         end
-                        else if (|uncache_wen_buffer) begin // write
+                        else if (uncache_wen_buffer) begin // write
                             awid <= 4'b1;
                             awaddr <= uncache_addr_buffer;
                             awlen <= 4'b0;
-                            case (uncache_wen_buffer)
+                            wstrb <= uncache_sel_buffer;   
+                            case (uncache_sel_buffer)
                                 4'b0001,4'b0010,4'b0100,4'b1000:begin
                                     awsize <= 3'b000; 
-                                    wstrb <= uncache_wen_buffer;       
                                 end
                                 4'b0011,4'b1100:begin
                                     awsize <= 3'b001;
-                                    wstrb <= uncache_wen_buffer;
                                 end
                                 4'b1111:begin
                                     awsize <= 3'b010;
-                                    wstrb <= uncache_wen_buffer;
                                 end
                                 default:begin
                                     awsize <= 3'b010;
-                                    wstrb <= uncache_wen_buffer;
                                 end
                             endcase
                             awvalid <= 1'b1;
