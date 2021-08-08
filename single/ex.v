@@ -48,6 +48,7 @@ module ex (
     wire [11:0] br_op_i;
     wire [8:0] hilo_op_i;
     wire [4:0] mem_op_i;
+    wire [5:0] cp0_op_i;
     wire [13:0] alu_op_i;
     wire [2:0] sel_alu_src1_i;
     wire [3:0] sel_alu_src2_i;
@@ -61,6 +62,7 @@ module ex (
     wire [31:0] excepttype_i;
 
     assign {
+        cp0_op_i,       // 224:219
         excepttype_i,   // 218:187
         mem_op_i,       // 186:182
         hilo_op_i,      // 181:173
@@ -83,6 +85,7 @@ module ex (
     reg [11:0] br_op;
     reg [8:0] hilo_op;
     reg [4:0] mem_op;
+    reg [5:0] cp0_op;
     reg [13:0] alu_op;
     reg [2:0] sel_alu_src1;
     reg [3:0] sel_alu_src2;
@@ -109,6 +112,7 @@ module ex (
             br_op <= 12'b0;
             hilo_op <= 9'b0;
             mem_op <= 5'b0;
+            cp0_op <= 6'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -129,6 +133,7 @@ module ex (
             br_op <= 12'b0;
             hilo_op <= 9'b0;
             mem_op <= 5'b0;
+            cp0_op <= 6'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -149,6 +154,7 @@ module ex (
             br_op <= 12'b0;
             hilo_op <= 9'b0;
             mem_op <= 5'b0;
+            cp0_op <= 6'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -169,6 +175,7 @@ module ex (
             br_op <= br_op_i;
             hilo_op <= hilo_op_i;
             mem_op <= mem_op_i;
+            cp0_op <= cp0_op_i;
             alu_op <= alu_op_i;
             sel_alu_src1 <= sel_alu_src1_i;
             sel_alu_src2 <= sel_alu_src2_i;
@@ -235,14 +242,14 @@ module ex (
 // output
     wire ovassert, loadassert, storeassert;
     wire [31:0] bad_vaddr;
-    wire cp0_op;
+    wire rf_cp0_we;
     wire [40:0] cp0_bus;
     reg stop_store;
     wire [63:0] mul_result;
     wire inst_mul;
     
     assign ex_result = alu_op[12] ? hilo_result :
-                       cp0_op ? cp0_reg_data_i :
+                       rf_cp0_we ? cp0_reg_data_i :
                        inst_mul ? mul_result[31:0] : alu_result;
     assign excepttype_o = {excepttype_arr[31:16],loadassert,storeassert,excepttype_arr[13:12],ovassert,1'b0,excepttype_arr[9:8],8'b0};
     
@@ -688,15 +695,21 @@ module ex (
 
 // cp0 part
     wire inst_mfc0,inst_mtc0;
+    wire inst_cache, inst_tlbp, inst_tlbr, inst_tlbwi;
     assign {
+        inst_cache,
+        inst_tlbp,
+        inst_tlbr,
+        inst_tlbwi,
         inst_mfc0,
         inst_mtc0
-    } = excepttype_arr[1:0];
-    assign cp0_op = inst_mfc0;
+    } = cp0_op;
 
-    wire cp0_reg_we = inst_mtc0;
-    wire [4:0] cp0_reg_waddr = inst[15:11];
-    wire [2:0] cp0_reg_wsel = inst[2:0];
+    assign rf_cp0_we = inst_mfc0;
+
+    wire cp0_reg_we = inst_mtc0 | inst_tlbp;
+    wire [4:0] cp0_reg_waddr = inst_tlbp ? `CP0_REG_INDEX : inst[15:11];
+    wire [2:0] cp0_reg_wsel = inst_tlbp ? 3'b0 : inst[2:0];
     wire [31:0] cp0_reg_wdata = alu_src2;
 
     assign cp0_reg_raddr = inst[15:11];

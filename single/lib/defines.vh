@@ -164,7 +164,7 @@
 
 `define PC_TO_IC_WD 65
 `define IC_TO_ID_WD 65
-`define ID_TO_EX_WD 219
+`define ID_TO_EX_WD 225
 `define EX_TO_DT_WD 253
 `define DT_TO_DC_WD 253
 `define DC_TO_MEM_WD 253
@@ -181,8 +181,12 @@
 `define StronglyNotToken 2'b01
 
 //CP0寄存器地址
+`define CP0_REG_INDEX       5'b00000
+`define CP0_REG_ENTRYLO0    5'b00010
+`define CP0_REG_ENTRYLO1    5'b00011    
 `define CP0_REG_BADADDR     5'b01000
 `define CP0_REG_COUNT       5'b01001        //可读写
+`define CP0_REG_ENTRYHI     5'b01010        
 `define CP0_REG_COMPARE     5'b01011        //可读写
 `define CP0_REG_STATUS      5'b01100        //可读写
 `define CP0_REG_CAUSE       5'b01101        //只读

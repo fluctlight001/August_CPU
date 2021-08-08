@@ -8,6 +8,7 @@ module decoder (
     output wire [11:0] br_op,
     output wire [8:0] hilo_op,
     output wire [4:0] mem_op,
+    output wire [5:0] cp0_op,
 
     output wire [2:0] sel_alu_src1, 
     output wire [3:0] sel_alu_src2,
@@ -70,6 +71,8 @@ module decoder (
     wire inst_break,    inst_syscall;
     wire inst_eret, inst_mfc0,  inst_mtc0;
     wire inst_mul;
+    wire inst_tlbp, inst_tlbr,  inst_tlbwi;
+    wire inst_cache;
 
 
     wire op_add, op_sub, op_slt, op_sltu;
@@ -78,7 +81,7 @@ module decoder (
     wire op_hilo, op_excepttype;
 
     wire excepttype_is_syscall, excepttype_is_eret, excepttype_is_break, excepttype_is_instinvalid;
-    assign excepttype_o = {18'b0,excepttype_is_break,excepttype_is_eret,2'b00,excepttype_is_instinvalid,excepttype_is_syscall,6'b0,inst_mfc0,inst_mtc0};
+    assign excepttype_o = {18'b0,excepttype_is_break,excepttype_is_eret,2'b00,excepttype_is_instinvalid,excepttype_is_syscall,8'b0};
     
     assign excepttype_is_syscall = inst_syscall;
     assign excepttype_is_eret = inst_eret;
@@ -97,7 +100,9 @@ module decoder (
                                         | inst_lb | inst_lbu | inst_lh | inst_lhu 
                                         | inst_lw | inst_sb | inst_sh | inst_sw 
                                         | inst_break | inst_syscall | inst_eret 
-                                        | inst_mfc0 | inst_mtc0);
+                                        | inst_mfc0 | inst_mtc0 |
+                                        | inst_tlbp | inst_tlbr | inst_tlbwi
+                                        | inst_cache);
 
     decoder_6_64 u0_decoder_6_64(
     	.in  (opcode),
@@ -191,6 +196,11 @@ module decoder (
     assign inst_mfc0    = op_d[6'b01_0000] & rs_d[5'b0_0000];
     assign inst_mtc0    = op_d[6'b01_0000] & rs_d[5'b0_0100];
 
+    assign inst_tlbp    = op_d[6'b01_0000] & rs_d[5'b1_0000] & func_d[6'b00_1000];
+    assign inst_tlbr    = op_d[6'b01_0000] & rs_d[5'b1_0000] & func_d[6'b00_0001];
+    assign inst_tlbwi   = op_d[6'b01_0000] & rs_d[5'b1_0000] & func_d[6'b00_0010];
+    assign inst_cache   = op_d[6'b10_1111];
+
 
     // rs to reg1  
     assign sel_alu_src1[0] = inst_add | inst_addi | inst_addu | inst_addiu 
@@ -215,7 +225,10 @@ module decoder (
                            | inst_or | inst_xor | inst_sllv | inst_sll 
                            | inst_srav | inst_sra | inst_srlv | inst_srl;
     // imm_sign_extend to reg2
-    assign sel_alu_src2[1] = inst_addi | inst_addiu | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu | inst_sw | inst_sh | inst_sb | inst_lui
+    assign sel_alu_src2[1] = inst_addi | inst_addiu 
+                           | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu 
+                           | inst_sw | inst_sh | inst_sb 
+                           | inst_lui
                            | inst_slti | inst_sltiu ;
     // 32'd8 to reg2
     assign sel_alu_src2[2] = inst_jal | inst_bltzal | inst_bgezal | inst_jalr;
@@ -226,7 +239,10 @@ module decoder (
     
 
 
-    assign op_add = inst_add | inst_addu | inst_addi | inst_addiu | inst_lw | | inst_lb | inst_lbu | inst_lh | inst_lhu | inst_sw | inst_sh | inst_sb | inst_jal | inst_bltzal | inst_bgezal | inst_jalr;
+    assign op_add = inst_add | inst_addu | inst_addi | inst_addiu 
+                  | inst_lw | | inst_lb | inst_lbu | inst_lh | inst_lhu 
+                  | inst_sw | inst_sh | inst_sb 
+                  | inst_jal | inst_bltzal | inst_bgezal | inst_jalr;
     assign op_sub = inst_sub | inst_subu;
     assign op_slt = inst_slt | inst_slti;
     assign op_sltu = inst_sltu | inst_sltiu;
@@ -261,17 +277,28 @@ module decoder (
     
 
     // store enable
-    assign rf_we = inst_add | inst_addu | inst_addi | inst_addiu | inst_sub | inst_subu | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu
-                 | inst_jal | inst_bltzal | inst_bgezal | inst_jalr | inst_slt | inst_slti | inst_sltu | inst_sltiu | inst_sllv | inst_sll 
-                 | inst_srlv | inst_srl | inst_srav | inst_sra | inst_lui | inst_and | inst_andi
-                 | inst_or | inst_ori | inst_xor | inst_xori | inst_nor | inst_mfhi | inst_mflo | inst_mfc0 | inst_mul;
+    assign rf_we = inst_add | inst_addu | inst_addi | inst_addiu | inst_sub | inst_subu 
+                 | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu
+                 | inst_jal | inst_bltzal | inst_bgezal | inst_jalr 
+                 | inst_slt | inst_slti | inst_sltu | inst_sltiu | inst_sllv | inst_sll 
+                 | inst_srlv | inst_srl | inst_srav | inst_sra 
+                 | inst_lui | inst_and | inst_andi | inst_or | inst_ori | inst_xor | inst_xori | inst_nor 
+                 | inst_mfhi | inst_mflo 
+                 | inst_mfc0 
+                 | inst_mul;
 
     // store in [rd]
     assign sel_rf_dst[0] = inst_add | inst_addu | inst_sub | inst_subu | inst_slt | inst_sltu 
-                         | inst_sllv | inst_sll | inst_srlv | inst_srl | inst_srav | inst_sra | inst_and 
-                         | inst_or | inst_xor | inst_nor | inst_mfhi | inst_mflo | inst_mul;
+                         | inst_sllv | inst_sll | inst_srlv | inst_srl | inst_srav | inst_sra 
+                         | inst_and | inst_or | inst_xor | inst_nor 
+                         | inst_mfhi | inst_mflo 
+                         | inst_mul;
     // store in [rt] 
-    assign sel_rf_dst[1] = inst_addi | inst_addiu | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu | inst_lui | inst_ori | inst_andi | inst_xori | inst_slti | inst_sltiu | inst_mfc0;
+    assign sel_rf_dst[1] = inst_addi | inst_addiu 
+                         | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu 
+                         | inst_lui | inst_ori | inst_andi | inst_xori 
+                         | inst_slti | inst_sltiu 
+                         | inst_mfc0;
     // store in [31]
     assign sel_rf_dst[2] = inst_jal | inst_bltzal | inst_bgezal | inst_jalr;
 
@@ -309,6 +336,16 @@ module decoder (
         inst_mfhi, inst_mflo, inst_mthi, inst_mtlo,
         inst_mult, inst_multu, inst_div, inst_divu,
         inst_mul
+    };
+
+// cp0 part
+    assign cp0_op = {
+        inst_cache,
+        inst_tlbp,
+        inst_tlbr,
+        inst_tlbwi,
+        inst_mfc0,
+        inst_mtc0
     };
     
 

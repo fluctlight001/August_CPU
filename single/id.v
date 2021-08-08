@@ -43,6 +43,7 @@ module id (
     wire [11:0] br_op;
     wire [8:0] hilo_op;
     wire [4:0] mem_op;
+    wire [5:0] cp0_op;
     wire [13:0] alu_op;
     wire sel_load_zero_extend;
     wire data_ram_en;
@@ -57,6 +58,7 @@ module id (
     assign excepttype_o = {excepttype_decoder[31:17],excepttype_arr[16],excepttype_decoder[15:0]};
 
     assign id_to_ex_bus = {
+        cp0_op,         // 224:219
         excepttype_o,   // 218:187
         mem_op,         // 186:180
         hilo_op,        // 181:173
@@ -132,6 +134,7 @@ module id (
         .br_op        (br_op        ),
         .hilo_op      (hilo_op      ),
         .mem_op       (mem_op       ),
+        .cp0_op       (cp0_op       ),
 
         // .sel_nextpc   (sel_nextpc   ),
         .sel_alu_src1 (sel_alu_src1 ),
