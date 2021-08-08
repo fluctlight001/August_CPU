@@ -18,7 +18,9 @@ module cp0_reg(
     output reg [31:0] status_o,
     output reg [31:0] cause_o,
     output reg [31:0] epc_o,
+    output reg [31:0] prid_o,
     output reg [31:0] config_o,
+    output reg [31:0] config1_o,
 
     output reg [31:0] timer_int_o,
 
@@ -57,9 +59,10 @@ module cp0_reg(
             status_o <= {4'b0001,28'd0};
             cause_o <= 32'b0;
             epc_o <= 32'b0;
-            config_o <= 32'b0;
+            prid_o <= 32'b00000000_0100111001000101_0000000000_000011;
+            config_o <= 32'b1_000000000000000_0_00_000_001_0000_011;
+            config1_o <= 32'b0_000000_000_100_001_000_100_001_0_0_0_0_0_0_0;
             timer_int_o <= 32'b0;
-            
         end
         else begin
             if (tick) begin
@@ -222,6 +225,9 @@ module cp0_reg(
         end
         else begin
             case (raddr_i)
+                `CP0_REG_BADADDR:begin
+                    data_r <= bad_vaddr;
+                end
                 `CP0_REG_COUNT:begin
                     data_r <= count;
                 end
@@ -237,11 +243,21 @@ module cp0_reg(
                 `CP0_REG_EPC:begin
                     data_r <= epc_o;
                 end
-                `CP0_REG_CONFIG:begin
-                    data_r <= config_o;
+                `CP0_REG_PRID:begin
+                    data_r <= prid_o;
                 end
-                `CP0_REG_BADADDR:begin
-                    data_r <= bad_vaddr;
+                `CP0_REG_CONFIG:begin
+                    case(rsel_i)
+                        3'b0:begin
+                            data_r <= config_o;
+                        end
+                        3'b1:begin
+                            data_r <= config1_o;
+                        end
+                        default:begin
+                            data_r <= `ZeroWord;
+                        end
+                    endcase
                 end
                 default:begin
                     data_r <= `ZeroWord;
