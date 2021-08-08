@@ -439,6 +439,7 @@ module mycpu_core(
     wire [31:0] hi, lo;
     wire stallreq_for_ex;
     wire [4:0] cp0_reg_raddr;
+    wire [2:0] cp0_reg_rsel;
     wire [31:0] cp0_reg_rdata;
     ex u_ex(
         .clk             (clk             ),
@@ -456,6 +457,7 @@ module mycpu_core(
         .hi_i            (hi              ),
         .lo_i            (lo              ),
         .cp0_reg_raddr   (cp0_reg_raddr   ),
+        .cp0_reg_rsel     (cp0_reg_rsel     ),
         .cp0_reg_data_i  (cp0_reg_rdata   ),
         // .is_in_delayslot_i(br_bus[32]     ),
         .ex_dt_sram_bus  (ex_dt_sram_bus  ),
@@ -502,8 +504,8 @@ module mycpu_core(
     
 
     wire [65:0] hilo_bus;
-    wire [38:0] cp0_bus;
-    assign cp0_bus = mem_to_wb_bus[270:233];
+    wire [40:0] cp0_bus;
+    assign cp0_bus = mem_to_wb_bus[273:233];
 
     wb u_wb(
     	.clk               (clk               ),
@@ -594,9 +596,11 @@ module mycpu_core(
         .rst               (rst               ),
         .stall             (stall             ),
 
-        .we_i              (cp0_bus[37]       ),
-        .waddr_i           (cp0_bus[36:32]    ),
+        .we_i              (cp0_bus[40]       ),
+        .waddr_i           (cp0_bus[39:35]    ),
+        .wsel_i            (cp0_bus[34:32]    ),
         .raddr_i           (cp0_reg_raddr     ),
+        .rsel_i            (cp0_reg_rsel      ),
         .data_i            (cp0_bus[31:0]     ),
         .int_i             (ext_int           ),
 
@@ -613,10 +617,10 @@ module mycpu_core(
         .bad_vaddr_i       (mem_to_wb_bus[199:168]       ),
         .is_in_delayslot_i (mem_to_wb_bus[200]           ),
 
-        .ex_cp0_bus        (ex_to_dt_bus[249:212]        ),
-        .dt_cp0_bus        (dt_to_dc_bus[249:212]        ),
-        .dc_cp0_bus        (dc_to_mem_bus[249:212]       ),
-        .mem_cp0_bus       (mem_to_wb_bus[270:233]       )
+        .ex_cp0_bus        (ex_to_dt_bus[252:212]        ),
+        .dt_cp0_bus        (dt_to_dc_bus[252:212]        ),
+        .dc_cp0_bus        (dc_to_mem_bus[252:212]       ),
+        .mem_cp0_bus       (mem_to_wb_bus[273:233]       )
         // .wb_cp0_bus        (cp0_bus        )
     );
  

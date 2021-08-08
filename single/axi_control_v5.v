@@ -153,6 +153,7 @@ module axi_control_v5(
 
                     uncache_en_buffer <= uncache_en;
                     uncache_wen_buffer <= uncache_wen;
+                    uncache_sel_buffer <= uncache_sel;
                     uncache_addr_buffer <= uncache_addr;
                     uncache_wdata_buffer <= uncache_wdata;
 

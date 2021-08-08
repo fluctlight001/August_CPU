@@ -31,6 +31,7 @@ module ex (
 
     // cp0
     output wire [4:0] cp0_reg_raddr,
+    output wire [2:0] cp0_reg_rsel,
     input wire [31:0] cp0_reg_data_i,
 
     // excepttype
@@ -235,7 +236,7 @@ module ex (
     wire ovassert, loadassert, storeassert;
     wire [31:0] bad_vaddr;
     wire cp0_op;
-    wire [37:0] cp0_bus;
+    wire [40:0] cp0_bus;
     reg stop_store;
     wire [63:0] mul_result;
     wire inst_mul;
@@ -257,7 +258,7 @@ module ex (
         end
     end
     assign ex_to_dt_bus = {
-        cp0_bus,        // 249:212
+        cp0_bus,        // 252:212
         is_in_delayslot,// 211
         bad_vaddr,      // 210:179
         excepttype_o,   // 178:147
@@ -695,14 +696,17 @@ module ex (
 
     wire cp0_reg_we = inst_mtc0;
     wire [4:0] cp0_reg_waddr = inst[15:11];
+    wire [2:0] cp0_reg_wsel = inst[2:0];
     wire [31:0] cp0_reg_wdata = alu_src2;
 
     assign cp0_reg_raddr = inst[15:11];
+    assign cp0_reg_rsel = inst[2:0];
 
     assign cp0_bus = {
-        cp0_reg_we,
-        cp0_reg_waddr,
-        cp0_reg_wdata
+        cp0_reg_we,     // 40
+        cp0_reg_waddr,  // 39:35
+        cp0_reg_wsel,   // 34:32
+        cp0_reg_wdata   // 31:0
     };
     
 

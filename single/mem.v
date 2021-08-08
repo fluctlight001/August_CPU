@@ -69,10 +69,10 @@ module mem(
     wire [31:0] excepttype_arr;
     wire [31:0] bad_vaddr;
     wire is_in_delayslot;
-    wire [37:0] cp0_bus;
+    wire [40:0] cp0_bus;
     
     assign {
-        cp0_bus,        // 249:212
+        cp0_bus,        // 252:212
         is_in_delayslot,// 211
         bad_vaddr,      // 210:179
         excepttype_arr, // 178:147
@@ -102,12 +102,12 @@ module mem(
     wire is_in_delayslot_o;
     wire [31:0] bad_vaddr_o;
     assign is_in_delayslot_o = is_in_delayslot;
-    wire [37:0] cp0_bus_o;
+    wire [40:0] cp0_bus_o;
     assign cp0_bus_o = cp0_bus;
     assign bad_vaddr_o = bad_vaddr;
 
     assign mem_to_wb_bus = {
-        cp0_bus_o,      // 270:233
+        cp0_bus_o,      // 273:233
         cp0_epc_o,      // 232:201
         is_in_delayslot_o,// 200
         bad_vaddr_o,    // 199:168
