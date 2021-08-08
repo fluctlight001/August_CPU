@@ -15,6 +15,13 @@ module cp0_reg(
     input wire [5:0] int_i,
 
     output wire [31:0] data_o,
+    output reg [31:0] index_o,
+    output reg [31:0] entrylo0_o,
+    output reg [31:0] entrylo1_o,
+    output reg [31:0] badvaddr_o,
+    output reg [31:0] count_o,
+    output reg [31:0] entryhi_o,
+    output reg [31:0] compare_o,
     output reg [31:0] status_o,
     output reg [31:0] cause_o,
     output reg [31:0] epc_o,
@@ -35,9 +42,7 @@ module cp0_reg(
     input wire [37:0] mem_cp0_bus
     // input wire [37:0] wb_cp0_bus
 );
-    reg [31:0] bad_vaddr;
-    reg [31:0] count;
-    reg [31:0] compare;
+    
     reg [31:0] data_r;
 
     reg tick;
@@ -53,32 +58,32 @@ module cp0_reg(
     // write 
     always @ (posedge clk) begin
         if (rst) begin
-            bad_vaddr <= 32'b0;
-            count <= 33'b0;
-            compare <= 32'b0;
+            badvaddr_o <= 32'b0;
+            count_o <= 33'b0;
+            compare_o <= 32'b0;
             status_o <= {4'b0001,28'd0};
             cause_o <= 32'b0;
             epc_o <= 32'b0;
-            prid_o <= 32'b00000000_0100111001000101_0000000000_000011;
+            prid_o <= 32'b00000000_0100111001000101_0000000000_000011; // 0x4E 0x45 "NE"
             config_o <= 32'b1_000000000000000_0_00_000_001_0000_011;
             config1_o <= 32'b0_000000_000_100_001_000_100_001_0_0_0_0_0_0_0;
             timer_int_o <= 32'b0;
         end
         else begin
             if (tick) begin
-                count <= count + 1'b1;
+                count_o <= count_o + 1'b1;
             end
             cause_o[15:10] <= int_i;
-            if (compare != 32'b0 && count == compare) begin
+            if (compare_o != 32'b0 && count_o == compare_o) begin
                 timer_int_o <= `InterruptAssert;
             end 
             if (we_i) begin
                 case (waddr_i)
                     `CP0_REG_COUNT:begin
-                        count <= data_i;
+                        count_o <= data_i;
                     end 
                     `CP0_REG_COMPARE:begin
-                        compare <= data_i;
+                        compare_o <= data_i;
                     end
                     `CP0_REG_STATUS:begin
                         status_o <= data_i;
@@ -122,7 +127,7 @@ module cp0_reg(
                     end
                     status_o[1] <= 1'b1;
                     cause_o[6:2] <= 5'b00100;
-                    bad_vaddr <= bad_vaddr_i;
+                    badvaddr_o <= bad_vaddr_i;
                 end
                 32'h00000005:begin // storeassert
                     if (status_o[1] == 1'b0) begin
@@ -137,7 +142,7 @@ module cp0_reg(
                     end
                     status_o[1] <= 1'b1;
                     cause_o[6:2] <= 5'b00101;
-                    bad_vaddr <= bad_vaddr_i;
+                    badvaddr_o <= bad_vaddr_i;
                 end
                 32'h00000008:begin // syscall
                     if (status_o[1] == 1'b0) begin
@@ -226,13 +231,13 @@ module cp0_reg(
         else begin
             case (raddr_i)
                 `CP0_REG_BADADDR:begin
-                    data_r <= bad_vaddr;
+                    data_r <= badvaddr_o;
                 end
                 `CP0_REG_COUNT:begin
-                    data_r <= count;
+                    data_r <= count_o;
                 end
                 `CP0_REG_COMPARE:begin
-                    data_r <= compare;
+                    data_r <= compare_o;
                 end
                 `CP0_REG_STATUS:begin
                     data_r <= status_o;
