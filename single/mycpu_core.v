@@ -57,6 +57,7 @@ module mycpu_core(
     wire [31:0] inst_sram_addr;
     wire [31:0] inst_sram_wdata;
     wire [31:0] inst_sram_rdata;
+    wire inst_uncached;
 
     wire data_sram_en;
     wire data_sram_wen;
@@ -64,6 +65,7 @@ module mycpu_core(
     wire [31:0] data_sram_addr;
     wire [31:0] data_sram_wdata;
     wire [31:0] data_sram_rdata;
+    wire data_uncached;
 
     // icache tag
     wire icache_cached;
@@ -178,6 +180,50 @@ module mycpu_core(
         .bvalid               (bvalid               ),
         .bready               (bready               )
     );
+
+    tlb 
+    #(
+        .TLBNUM (15)
+    )
+    u_tlb(
+    	.clk           (clk           ),
+        .resetn        (~rst          ),
+        .we            (we            ),
+        .w_index       (w_index       ),
+        .w_hi          (w_hi          ),
+        .w_lo0         (w_lo0         ),
+        .w_lo1         (w_lo1         ),
+        .r_index       (r_index       ),
+
+        .inst_en       (inst_sram_en       ),
+        .inst_vaddr    (inst_sram_addr     ),
+        .inst_uncached (inst_uncached ),    //  1 - uncached | 0 - cached
+        .inst_tag      (inst_tag      ),
+
+        .data_wen      (data_wen      ),
+        .data_en       (data_en       ),
+        .data_vaddr    (data_vaddr    ),
+        .data_uncached (data_uncached ),
+        .data_tag      (data_tag      ),
+
+        .p_index       (p_index       ),
+
+        .i_refill      (i_refill      ),
+        .i_invalid     (i_invalid     ),
+        .d_refill      (d_refill      ),
+        .d_invalid     (d_invalid     ),
+        .d_modify      (d_modify      ),
+
+        .op_tlbp       (1'b0       ),
+        .op_tlbr       (1'b0       ),
+        .op_tlbwi      (1'b0      ),
+        .op_tlbwr      (1'b0      ),
+
+        .r_hi          (r_hi          ),
+        .r_lo0         (r_lo0         ),
+        .r_lo1         (r_lo1         )
+    );
+    
 
     wire [31:0] inst_sram_addr_mmu;
     mmu u_inst_mmu(
