@@ -243,7 +243,7 @@ module ex (
     wire ovassert, loadassert, storeassert;
     wire [31:0] bad_vaddr;
     wire rf_cp0_we;
-    wire [40:0] cp0_bus;
+    wire [46:0] cp0_bus;
     reg stop_store;
     wire [63:0] mul_result;
     wire inst_mul;
@@ -251,7 +251,7 @@ module ex (
     assign ex_result = alu_op[12] ? hilo_result :
                        rf_cp0_we ? cp0_reg_data_i :
                        inst_mul ? mul_result[31:0] : alu_result;
-    assign excepttype_o = {excepttype_arr[31:16],loadassert,storeassert,excepttype_arr[13:12],ovassert,1'b0,excepttype_arr[9:8],8'b0};
+    assign excepttype_o = {excepttype_arr[31:16],loadassert,storeassert,excepttype_arr[13:12],ovassert,1'b0,excepttype_arr[9:0]};
     
     always @ (posedge clk) begin
         if (rst) begin
@@ -265,7 +265,7 @@ module ex (
         end
     end
     assign ex_to_dt_bus = {
-        cp0_bus,        // 252:212
+        cp0_bus,        // 258:212
         is_in_delayslot,// 211
         bad_vaddr,      // 210:179
         excepttype_o,   // 178:147
@@ -707,15 +707,16 @@ module ex (
 
     assign rf_cp0_we = inst_mfc0;
 
-    wire cp0_reg_we = inst_mtc0 | inst_tlbp;
-    wire [4:0] cp0_reg_waddr = inst_tlbp ? `CP0_REG_INDEX : inst[15:11];
-    wire [2:0] cp0_reg_wsel = inst_tlbp ? 3'b0 : inst[2:0];
+    wire cp0_reg_we = inst_mtc0;
+    wire [4:0] cp0_reg_waddr = inst[15:11];
+    wire [2:0] cp0_reg_wsel = inst[2:0];
     wire [31:0] cp0_reg_wdata = alu_src2;
 
     assign cp0_reg_raddr = inst[15:11];
     assign cp0_reg_rsel = inst[2:0];
 
     assign cp0_bus = {
+        cp0_op,         // 46:41
         cp0_reg_we,     // 40
         cp0_reg_waddr,  // 39:35
         cp0_reg_wsel,   // 34:32

@@ -15,7 +15,10 @@ module mem(
     input wire [`RegBus] cp0_cause,
     input wire [`RegBus] cp0_epc,
 
-    output wire [31:0] epc_to_ctrl
+    // tlb
+    output wire op_tlbp,
+    output wire op_tlbr,
+    output wire op_tlbwi
 );
 
     reg [`DC_TO_MEM_WD-1:0] dc_to_mem_bus_r;
@@ -69,10 +72,10 @@ module mem(
     wire [31:0] excepttype_arr;
     wire [31:0] bad_vaddr;
     wire is_in_delayslot;
-    wire [40:0] cp0_bus;
+    wire [46:0] cp0_bus;
     
     assign {
-        cp0_bus,        // 252:212
+        cp0_bus,        // 258:212
         is_in_delayslot,// 211
         bad_vaddr,      // 210:179
         excepttype_arr, // 178:147
@@ -103,7 +106,7 @@ module mem(
     wire [31:0] bad_vaddr_o;
     assign is_in_delayslot_o = is_in_delayslot;
     wire [40:0] cp0_bus_o;
-    assign cp0_bus_o = cp0_bus;
+    assign cp0_bus_o = cp0_bus[40:0];
     assign bad_vaddr_o = bad_vaddr;
 
     assign mem_to_wb_bus = {
@@ -200,6 +203,21 @@ module mem(
     // assign mem_result = data_sram_rdata_r;
     assign rf_wdata = sel_rf_res ? mem_result_r : alu_result;
 
+// tlb part
+    wire inst_mfc0,inst_mtc0, inst_cache, inst_tlbp, inst_tlbr, inst_tlbwi;
+    assign {
+        inst_cache,
+        inst_tlbp,
+        inst_tlbr,
+        inst_tlbwi,
+        inst_mfc0,
+        inst_mtc0
+    } = cp0_bus[46:41];
+
+    assign op_tlbp = inst_tlbp;
+    assign op_tlbr = inst_tlbr;
+    assign op_tlbwi = inst_tlbwi;
+
 // excepttype part
     // wire [31:0] cp0_status;
     // wire [31:0] cp0_cause;
@@ -242,6 +260,9 @@ module mem(
                 end
                 else if (excepttype_arr[15] == 1'b1) begin // loadassert
                     excepttype_o <= 32'h00000004;
+                end
+                else if (excepttype_arr[0] == 1'b1) begin // again_flag :  re execute the current instruction
+                    excepttype_o <= 32'hffffffff;
                 end
             end
         end

@@ -15,6 +15,7 @@ module cp0_reg(
     input wire [5:0] int_i,
 
     output wire [31:0] data_o,
+
     output reg [31:0] index_o,
     output reg [31:0] entrylo0_o,
     output reg [31:0] entrylo1_o,
@@ -39,8 +40,17 @@ module cp0_reg(
     input wire [37:0] ex_cp0_bus,
     input wire [37:0] dt_cp0_bus,
     input wire [37:0] dc_cp0_bus,
-    input wire [37:0] mem_cp0_bus
+    input wire [37:0] mem_cp0_bus,
     // input wire [37:0] wb_cp0_bus
+
+    // tlb
+    input wire        op_tlbp,
+    input wire        op_tlbr,
+    input wire        op_tlbwi,
+    input wire [31:0] tlb_index,
+    input wire [31:0] tlb_entryhi,
+    input wire [31:0] tlb_entrylo0,
+    input wire [31:0] tlb_entrylo1
 );
     
     reg [31:0] data_r;
@@ -58,8 +68,12 @@ module cp0_reg(
     // write 
     always @ (posedge clk) begin
         if (rst) begin
+            index_o <= {1'b1,31'b0};
+            entrylo0_o <= 32'b0;
+            entrylo1_o <= 32'b0;
             badvaddr_o <= 32'b0;
-            count_o <= 33'b0;
+            count_o <= 32'b0;
+            entryhi_o <= 32'b0;
             compare_o <= 32'b0;
             status_o <= {4'b0001,28'd0};
             cause_o <= 32'b0;
@@ -77,6 +91,14 @@ module cp0_reg(
             if (compare_o != 32'b0 && count_o == compare_o) begin
                 timer_int_o <= `InterruptAssert;
             end 
+            if (op_tlbr) begin
+                entryhi_o <= tlb_entryhi;
+                entrylo0_o <= tlb_entrylo0;
+                entrylo1_o <= tlb_entrylo1;
+            end
+            if (op_tlbp) begin
+                index_o <= tlb_index;
+            end
             if (we_i) begin
                 case (waddr_i)
                     `CP0_REG_COUNT:begin

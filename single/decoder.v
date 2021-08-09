@@ -342,8 +342,8 @@ module decoder (
     assign cp0_op = {
         inst_cache,
         inst_tlbp,
-        inst_tlbr,
-        inst_tlbwi,
+        inst_tlbr,  // again_flag
+        inst_tlbwi, // again_flag
         inst_mfc0,
         inst_mtc0
     };
