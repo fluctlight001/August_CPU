@@ -28,7 +28,6 @@ module id (
     reg [31:0] excepttype_arr;
     wire [31:0] excepttype_decoder;
     wire [31:0] excepttype_o;
-    reg again_flag;
     // wire [31:0] inst_i,
     assign {
         excepttype_i,
@@ -54,7 +53,7 @@ module id (
 
     wire [`RegBus] rf_rdata1, rf_rdata2;
 
-    assign excepttype_o = {excepttype_decoder[31:17],excepttype_arr[16],excepttype_decoder[15:1],again_flag};
+    assign excepttype_o = {excepttype_decoder[31:17],excepttype_arr[16],excepttype_decoder[15:8],excepttype_arr[7:1],excepttype_decoder[0]};
 
     assign id_to_ex_bus = {
         cp0_op,         // 224:219
@@ -177,22 +176,5 @@ module id (
 
     assign rf_rdata1 = sel_r1_wdata ? wb_rf_wdata : rdata1;
     assign rf_rdata2 = sel_r2_wdata ? wb_rf_wdata : rdata2;
-
-    // tlb part
-    
-    always @ (posedge clk) begin
-        if (rst) begin
-            again_flag <= 1'b0;
-        end
-        if (flush) begin
-            again_flag <= 1'b0;
-        end
-        else if (cp0_op[3]|cp0_op[2]) begin
-            again_flag <= 1'b1;
-        end
-    end
-    
-
-
-    
+ 
 endmodule

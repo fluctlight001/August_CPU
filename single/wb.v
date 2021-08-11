@@ -13,7 +13,7 @@ module wb(
 
     output wire [65:0] hilo_bus,
 
-    output wire [37:0] cp0_bus,
+    output wire [40:0] cp0_bus,
     output wire [31:0] cp0_epc_o,
     output wire is_in_delayslot_o,
     output wire [31:0] bad_vaddr_o,

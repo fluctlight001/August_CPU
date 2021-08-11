@@ -184,7 +184,7 @@
 `define CP0_REG_INDEX       5'b00000
 `define CP0_REG_ENTRYLO0    5'b00010
 `define CP0_REG_ENTRYLO1    5'b00011    
-`define CP0_REG_BADADDR     5'b01000
+`define CP0_REG_BADVADDR    5'b01000
 `define CP0_REG_COUNT       5'b01001        //可读写
 `define CP0_REG_ENTRYHI     5'b01010        
 `define CP0_REG_COMPARE     5'b01011        //可读写

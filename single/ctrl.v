@@ -53,8 +53,23 @@ module ctrl (
                 32'h0000000e:begin
                     new_pc <= cp0_epc_i;
                 end
+                32'h00000011:begin
+                    new_pc <= 32'hbfc00200;
+                end
+                32'h00000012:begin
+                    new_pc <= 32'hbfc00380;
+                end
+                32'h00000013:begin
+                    new_pc <= 32'hbfc00200;
+                end
+                32'h00000014:begin
+                    new_pc <= 32'hbfc00380;
+                end
+                32'h00000015:begin
+                    new_pc <= 32'hbfc00380;
+                end
                 32'hffffffff:begin
-                    new_pc <= current_pc;
+                    new_pc <= current_pc + 32'h4;
                 end
                 default:begin
                     new_pc <= 32'b0;

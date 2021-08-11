@@ -191,6 +191,7 @@ module mycpu_core(
     wire [31:0] tlb_entrylo0;
     wire [31:0] tlb_entrylo1;
     wire [31:0] tlb_entryhi;
+    wire i_refill, i_invalid, d_refill, d_invalid, d_modify;
 
     wire op_tlbp, op_tlbr, op_tlbwi;
     tlb 
@@ -222,11 +223,11 @@ module mycpu_core(
 
         .p_index       (tlb_index       ),
 
-        .i_refill      (i_refill      ),
-        .i_invalid     (i_invalid     ),
-        .d_refill      (d_refill      ),
-        .d_invalid     (d_invalid     ),
-        .d_modify      (d_modify      ),
+        .i_refill      (i_refill      ),    // excepttype[1]
+        .i_invalid     (i_invalid     ),    // excepttype[2]
+        .d_refill      (d_refill      ),    // excepttype[3]
+        .d_invalid     (d_invalid     ),    // excepttype[4]
+        .d_modify      (d_modify      ),    // excepttype[5]
 
         .op_tlbp       (op_tlbp       ),
         .op_tlbr       (1'b0       ),
@@ -253,7 +254,7 @@ module mycpu_core(
         .flush      (flush      ),
         .stallreq   (stallreq_from_icache   ),
         .cached     (1'b1     ),
-        .sram_en    (inst_sram_en    ),
+        .sram_en    (inst_sram_en & ~i_refill & ~i_invalid    ),
         .sram_addr  (inst_sram_addr_mmu),
         .refresh    (icache_refresh    ),
         .miss       (icache_miss       ),
@@ -271,7 +272,7 @@ module mycpu_core(
         .hit           (icache_hit           ),
         .lru           (icache_lru           ),
         .cached        (1'b1        ),
-        .sram_en       (inst_sram_en       ),
+        .sram_en       (inst_sram_en & ~i_refill & ~i_invalid),
         .sram_wen      (inst_sram_wen      ),
         .sram_addr     (inst_sram_addr_mmu     ),
         .sram_wdata    (inst_sram_wdata    ),
@@ -297,7 +298,7 @@ module mycpu_core(
         .flush      (flush      ),
         .stallreq   (stallreq_from_dcache   ),
         .cached     (~data_uncached     ),
-        .sram_en    (data_sram_en    ),
+        .sram_en    (data_sram_en & ~d_refill & ~d_invalid & ~d_modify ),
         .sram_addr  (data_sram_addr_mmu  ),
         .refresh    (dcache_refresh    ),
         .miss       (dcache_miss       ),
@@ -315,7 +316,7 @@ module mycpu_core(
         .hit           (dcache_hit           ),
         .lru           (dcache_lru           ),
         .cached        (~data_uncached        ),
-        .sram_en       (data_sram_en       ),
+        .sram_en       (data_sram_en & ~d_refill & ~d_invalid & ~d_modify       ),
         .sram_wen      ({4{data_sram_wen}}&data_sram_sel),
         .sram_addr     (data_sram_addr_mmu     ),
         .sram_wdata    (data_sram_wdata    ),
@@ -330,7 +331,7 @@ module mycpu_core(
         .rst       (rst       ),
         .stallreq  (stallreq_from_uncache  ),
         .cached    (~data_uncached    ),
-        .sram_en   (data_sram_en   ),
+        .sram_en   (data_sram_en & ~d_refill & ~d_invalid & ~d_modify   ),
         .sram_wen  (data_sram_wen),
         .sram_sel  (data_sram_sel),
         .sram_addr (data_sram_addr_mmu ),
@@ -371,14 +372,14 @@ module mycpu_core(
     
 
 
-    // assign inst_sram_en     = rst ? 1'b0 : pc_ce;
+    assign inst_sram_en     = pc_to_ic_bus[32];
     assign inst_sram_wen    = 4'b0;
-    // assign inst_sram_addr   = rst ? 32'b0 : pc_pc;
+    assign inst_sram_addr   = pc_to_ic_bus[31:0];
     assign inst_sram_wdata  = 32'b0;
-    assign {
-        inst_sram_en,
-        inst_sram_addr
-    } = pc_to_ic_bus[32:0];
+    // assign {
+    //     inst_sram_en,
+    //     inst_sram_addr
+    // } = pc_to_ic_bus[32:0];
     
 
     wire [`InstBus] ic_inst;
@@ -455,7 +456,9 @@ module mycpu_core(
         .rst          (rst          ),
         .stall        (stall        ),
         .flush        (flush        ),
-        .br_e         (branch_e   ),
+        .br_e         (branch_e     ),
+        .i_refill     (i_refill     ),
+        .i_invalid    (i_invalid    ),
         .pc_to_ic_bus (pc_to_ic_bus ),
         .ic_to_id_bus (ic_to_id_bus )
     );
@@ -546,6 +549,9 @@ module mycpu_core(
         .rst           (rst           ),
         .flush         (flush         ),
         .stall         (stall         ),
+        .d_refill      (d_refill      ),
+        .d_invalid     (d_invalid     ),
+        .d_modify      (d_modify      ),
         .dt_to_dc_bus  (dt_to_dc_bus  ),
         .dc_to_mem_bus (dc_to_mem_bus )
     );

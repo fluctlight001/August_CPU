@@ -99,6 +99,10 @@ module mem(
         inst_lw
     } = mem_op;
 
+    wire op_load, op_store;
+    assign op_load = |mem_op;
+    assign op_store = |data_ram_wen;
+
         
     reg [31:0] excepttype_o;
     wire [31:0] cp0_epc_o;
@@ -107,7 +111,12 @@ module mem(
     assign is_in_delayslot_o = is_in_delayslot;
     wire [40:0] cp0_bus_o;
     assign cp0_bus_o = cp0_bus[40:0];
-    assign bad_vaddr_o = bad_vaddr;
+
+    wire i_refill, i_invalid, d_refill, d_invalid, d_modify;
+    assign {d_modify,d_invalid,d_refill,i_invalid,i_refill} = excepttype_arr[5:1];
+    assign bad_vaddr_o = (i_refill|i_invalid) ? pc 
+                       : (d_refill|d_invalid|d_modify) ? alu_result 
+                       : bad_vaddr;
 
     assign mem_to_wb_bus = {
         cp0_bus_o,      // 273:233
@@ -240,6 +249,12 @@ module mem(
                 else if (excepttype_arr[9] == 1'b1) begin // inst_invalid
                     excepttype_o <= 32'h0000000a;
                 end
+                else if (excepttype_arr[1] == 1'b1) begin // tlb i_refill
+                    excepttype_o <= 32'h00000011;
+                end
+                else if (excepttype_arr[2] == 1'b1) begin // tlb i_invalid
+                    excepttype_o <= 32'h00000012;
+                end
                 else if (excepttype_arr[8] == 1'b1) begin // syscall
                     excepttype_o <= 32'h00000008;
                 end
@@ -260,6 +275,21 @@ module mem(
                 end
                 else if (excepttype_arr[15] == 1'b1) begin // loadassert
                     excepttype_o <= 32'h00000004;
+                end
+                else if (excepttype_arr[3] & op_load) begin // tlb d_refill r
+                    excepttype_o <= 32'h00000011;
+                end
+                else if (excepttype_arr[3] & op_store) begin // tlb d_refill w
+                    excepttype_o <= 32'h00000013;
+                end
+                else if (excepttype_arr[4] & op_load) begin // tlb d_invalid r
+                    excepttype_o <= 32'h00000012;
+                end
+                else if (excepttype_arr[4] & op_store) begin // tlb d_invalid w
+                    excepttype_o <= 32'h00000014;
+                end 
+                else if (excepttype_arr[5] == 1'b1) begin // tlb d_modify
+                    excepttype_o <= 32'h00000015;
                 end
                 else if (excepttype_arr[0] == 1'b1) begin // again_flag :  re execute the current instruction
                     excepttype_o <= 32'hffffffff;

@@ -37,10 +37,10 @@ module cp0_reg(
     input wire [31:0] bad_vaddr_i,
     input wire is_in_delayslot_i,
 
-    input wire [37:0] ex_cp0_bus,
-    input wire [37:0] dt_cp0_bus,
-    input wire [37:0] dc_cp0_bus,
-    input wire [37:0] mem_cp0_bus,
+    input wire [40:0] ex_cp0_bus,
+    input wire [40:0] dt_cp0_bus,
+    input wire [40:0] dc_cp0_bus,
+    input wire [40:0] mem_cp0_bus,
     // input wire [37:0] wb_cp0_bus
 
     // tlb
@@ -92,17 +92,32 @@ module cp0_reg(
                 timer_int_o <= `InterruptAssert;
             end 
             if (op_tlbr) begin
-                entryhi_o <= tlb_entryhi;
-                entrylo0_o <= tlb_entrylo0;
-                entrylo1_o <= tlb_entrylo1;
+                entryhi_o <= {tlb_entryhi[31:13],5'b0,tlb_entryhi[7:0]};
+                entrylo0_o <= {6'b0,tlb_entrylo0[25:0]};
+                entrylo1_o <= {6'b0,tlb_entrylo1[25:0]};
             end
             if (op_tlbp) begin
-                index_o <= tlb_index;
+                index_o <= {tlb_index[31],27'b0,tlb_index[3:0]};
             end
             if (we_i) begin
                 case (waddr_i)
+                    `CP0_REG_INDEX:begin
+                        index_o <= {28'b0,data_i[3:0]};
+                    end
+                    `CP0_REG_ENTRYLO0:begin
+                        entrylo0_o <= {6'b0,data_i[25:0]};
+                    end
+                    `CP0_REG_ENTRYLO1:begin
+                        entrylo1_o <= {6'b0,data_i[25:0]};
+                    end
+                    `CP0_REG_BADVADDR:begin
+                        badvaddr_o <= data_i;
+                    end
                     `CP0_REG_COUNT:begin
                         count_o <= data_i;
+                    end
+                    `CP0_REG_ENTRYHI:begin
+                        entryhi_o <= {data_i[31:13],5'b0,data_i[7:0]};
                     end 
                     `CP0_REG_COMPARE:begin
                         compare_o <= data_i;
@@ -133,9 +148,9 @@ module cp0_reg(
                         epc_o <= pc_i;
                         cause_o[31] <= 1'b0;
                     end
-                        status_o[1] <= 1'b1;
-                        cause_o[6:2] <= 5'b00000;
-                    end
+                    status_o[1] <= 1'b1;
+                    cause_o[6:2] <= 5'b00000;
+                end
                 32'h00000004:begin // loadassert
                     if (status_o[1] == 1'b0) begin
                         if (is_in_delayslot_i == `InDelaySlot) begin
@@ -236,8 +251,88 @@ module cp0_reg(
                     status_o[1] <= 1'b1;
                     cause_o[6:2] <= 5'b01100; 
                 end
-                32'h0000000e:begin // 
+                32'h0000000e:begin // eret
                     status_o[1] <= 1'b0;
+                end
+                32'h00000011:begin // tlb r_refill
+                    if (status_o[1] == 1'b0) begin
+                        if (is_in_delayslot_i == `InDelaySlot) begin
+                            epc_o <= pc_i - 4;
+                            cause_o[31] <= 1'b1;
+                        end
+                        else begin
+                            epc_o <= pc_i;
+                            cause_o[31] <= 1'b0;
+                        end
+                    end
+                    status_o[1] <= 1'b1;
+                    cause_o[6:2] <= 5'b00010; 
+                    badvaddr_o <= bad_vaddr_i;
+                    entryhi_o[31:13] <= bad_vaddr_i[31:13];
+                end
+                32'h00000012:begin // tlb r_invalid
+                    if (status_o[1] == 1'b0) begin
+                        if (is_in_delayslot_i == `InDelaySlot) begin
+                            epc_o <= pc_i - 4;
+                            cause_o[31] <= 1'b1;
+                        end
+                        else begin
+                            epc_o <= pc_i;
+                            cause_o[31] <= 1'b0;
+                        end
+                    end
+                    status_o[1] <= 1'b1;
+                    cause_o[6:2] <= 5'b00010;
+                    badvaddr_o <= bad_vaddr_i;
+                    entryhi_o[31:13] <= bad_vaddr_i[31:13];
+                end
+                32'h00000013:begin // tlb w_refill
+                    if (status_o[1] == 1'b0) begin
+                        if (is_in_delayslot_i == `InDelaySlot) begin
+                            epc_o <= pc_i - 4;
+                            cause_o[31] <= 1'b1;
+                        end
+                        else begin
+                            epc_o <= pc_i;
+                            cause_o[31] <= 1'b0;
+                        end
+                    end
+                    status_o[1] <= 1'b1;
+                    cause_o[6:2] <= 5'b00011;
+                    badvaddr_o <= bad_vaddr_i;
+                    entryhi_o[31:13] <= bad_vaddr_i[31:13];
+                end
+                32'h00000014:begin // tlb w_invalid
+                    if (status_o[1] == 1'b0) begin
+                        if (is_in_delayslot_i == `InDelaySlot) begin
+                            epc_o <= pc_i - 4;
+                            cause_o[31] <= 1'b1;
+                        end
+                        else begin
+                            epc_o <= pc_i;
+                            cause_o[31] <= 1'b0;
+                        end
+                    end
+                    status_o[1] <= 1'b1;
+                    cause_o[6:2] <= 5'b00011;
+                    badvaddr_o <= bad_vaddr_i;
+                    entryhi_o[31:13] <= bad_vaddr_i[31:13];
+                end
+                32'h00000015:begin // tlb d_modify
+                    if (status_o[1] == 1'b0) begin
+                        if (is_in_delayslot_i == `InDelaySlot) begin
+                            epc_o <= pc_i - 4;
+                            cause_o[31] <= 1'b1;
+                        end
+                        else begin
+                            epc_o <= pc_i;
+                            cause_o[31] <= 1'b0;
+                        end
+                    end
+                    status_o[1] <= 1'b1;
+                    cause_o[6:2] <= 5'b00001;
+                    badvaddr_o <= bad_vaddr_i;
+                    entryhi_o[31:13] <= bad_vaddr_i[31:13];
                 end
                 default:begin
                 
@@ -252,11 +347,23 @@ module cp0_reg(
         end
         else begin
             case (raddr_i)
-                `CP0_REG_BADADDR:begin
+                `CP0_REG_INDEX:begin
+                    data_r <= index_o;
+                end
+                `CP0_REG_ENTRYLO0:begin
+                    data_r <= entrylo0_o;
+                end
+                `CP0_REG_ENTRYLO1:begin
+                    data_r <= entrylo1_o;
+                end
+                `CP0_REG_BADVADDR:begin
                     data_r <= badvaddr_o;
                 end
                 `CP0_REG_COUNT:begin
                     data_r <= count_o;
+                end
+                `CP0_REG_ENTRYHI:begin
+                    data_r <= entryhi_o;
                 end
                 `CP0_REG_COMPARE:begin
                     data_r <= compare_o;
@@ -316,10 +423,33 @@ module cp0_reg(
     assign mem_ok = mem_buffer[40] & (raddr_i==mem_buffer[39:35] & rsel_i == mem_buffer[34:32]);
     // assign wb_ok = wb_cp0_bus[37] & (raddr_i==wb_cp0_bus[36:32]);
 
-    assign cp0_data_temp = ex_ok ? ex_buffer[31:0]
-                         : dt_ok ? dt_buffer[31:0]
-                         : dc_ok ? dc_buffer[31:0]
-                         : mem_ok ? mem_buffer[31:0]
+    wire [31:0] ex_wdata,dt_wdata,dc_wdata,mem_wdata;
+
+    assign ex_wdata = raddr_i == `CP0_REG_INDEX ? {28'b0,ex_buffer[3:0]} 
+                    : raddr_i == `CP0_REG_ENTRYLO0 ? {6'b0,ex_buffer[25:0]}
+                    : raddr_i == `CP0_REG_ENTRYLO1 ? {6'b0,ex_buffer[25:0]}
+                    : raddr_i == `CP0_REG_ENTRYHI ? {ex_buffer[31:13],5'b0,ex_buffer[7:0]}
+                    : ex_buffer[31:0];
+    assign dt_wdata = raddr_i == `CP0_REG_INDEX ? {28'b0,dt_buffer[3:0]} 
+                    : raddr_i == `CP0_REG_ENTRYLO0 ? {6'b0,dt_buffer[25:0]}
+                    : raddr_i == `CP0_REG_ENTRYLO1 ? {6'b0,dt_buffer[25:0]}
+                    : raddr_i == `CP0_REG_ENTRYHI ? {dt_buffer[31:13],5'b0,dt_buffer[7:0]}
+                    : dt_buffer[31:0];
+    assign dc_wdata = raddr_i == `CP0_REG_INDEX ? {28'b0,dc_buffer[3:0]} 
+                    : raddr_i == `CP0_REG_ENTRYLO0 ? {6'b0,dc_buffer[25:0]}
+                    : raddr_i == `CP0_REG_ENTRYLO1 ? {6'b0,dc_buffer[25:0]}
+                    : raddr_i == `CP0_REG_ENTRYHI ? {dc_buffer[31:13],5'b0,dc_buffer[7:0]}
+                    : dc_buffer[31:0];
+    assign mem_wdata = raddr_i == `CP0_REG_INDEX ? {28'b0,mem_buffer[3:0]} 
+                    : raddr_i == `CP0_REG_ENTRYLO0 ? {6'b0,mem_buffer[25:0]}
+                    : raddr_i == `CP0_REG_ENTRYLO1 ? {6'b0,mem_buffer[25:0]}
+                    : raddr_i == `CP0_REG_ENTRYHI ? {mem_buffer[31:13],5'b0,mem_buffer[7:0]}
+                    : mem_buffer[31:0];
+
+    assign cp0_data_temp = ex_ok ? ex_wdata
+                         : dt_ok ? dt_wdata
+                         : dc_ok ? dc_wdata
+                         : mem_ok ? mem_wdata
                         //  : wb_ok ? wb_cp0_bus[31:0]
                          : data_r;
     assign data_o = cp0_data_temp;

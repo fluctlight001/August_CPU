@@ -6,6 +6,9 @@ module ic(
     input wire flush,
     input wire br_e,
 
+    input wire i_refill,
+    input wire i_invalid,
+
     input wire [`PC_TO_IC_WD-1:0] pc_to_ic_bus,
 
     output wire [`IC_TO_ID_WD-1:0] ic_to_id_bus
@@ -45,7 +48,7 @@ module ic(
             icache_ce <= 1'b0;
         end
         else if (stall[1] == `NoStop) begin
-            excepttype_o <= excepttype_i;
+            excepttype_o <= {excepttype_i[31:3],i_invalid,i_refill,excepttype_i[0]};
             icache_pc <= pc_pc;
             icache_ce <= pc_ce;
         end

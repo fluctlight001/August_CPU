@@ -43,9 +43,9 @@ module tlb #(
     input wire op_tlbwi,        //默认不用  使用w端端口
     input wire op_tlbwr,        //默认不用  使用w端端口  
 
-    output wire r_hi,
-    output wire r_lo0,
-    output wire r_lo1
+    output wire [31:0] r_hi,
+    output wire [31:0] r_lo0,
+    output wire [31:0] r_lo1
 );
 //entryhi
 reg [18 :0] tlb_vpn2 [TLBNUM-1:0];
@@ -80,8 +80,8 @@ wire        w_d1;
 wire        w_v1;
 
 //---------------read----------------
-wire        r_vpn2;
-wire        r_asid;
+wire [19:0] r_vpn2;
+wire [7:0]  r_asid;
 wire        r_g;
 wire [19:0] r_pfn0;
 wire [2:0]  r_c0;
@@ -588,10 +588,16 @@ wire d_kseg1;
 wire d_kseg0;
 assign d_kseg0 = (data_vaddr[31:29] == 3'b100)  ?   1'b1    :   1'b0;
 assign d_kseg1 = (data_vaddr[31:29] == 3'b101)  ?   1'b1    :   1'b0;
+wire d_kseg0_p;
+wire d_kseg1_p;
+assign d_kseg0_p = (d_pfn0[19:17] == 3'b100) ? 1'b1 : 1'b0;
+assign d_kseg1_p = (d_pfn1[19:17] == 3'b101) ? 1'b1 : 1'b0;
 assign data_tag = (d_kseg0 | d_kseg1) ? {3'b0,data_vaddr[28:12]}    :
+                    (d_pfn[19:17] == 3'b100) ? {3'b0,d_pfn[16:0]}   :
+                    (d_pfn[19:17] == 3'b101) ? {3'b0,d_pfn[16:0]}   :
                     d_pfn;
-assign data_uncached = d_kseg1      ? 1'b1              :
-                        d_kseg0     ? (d_c == 3'b010)   :
+assign data_uncached = (d_kseg1_p | d_kseg1)      ? 1'b1              :
+                        (d_kseg0_p | d_kseg0_p)     ? (d_c == 3'b010)   :
                         1'b0;
 //-------------------MMU------------------------------
 //--------------tlb 指令-------------------
@@ -603,10 +609,10 @@ assign p_index = d_found ? d_index : {1'b1,31'b0};
 
 //异常
     //取指TLB异常
-        assign i_refill = (i_kseg0 | i_kseg0)   ?   1'b0    :   inst_en & ~i_found;
+        assign i_refill  = (i_kseg0 | i_kseg1)  ?   1'b0    :   inst_en & ~i_found;
         assign i_invalid = (i_kseg0 | i_kseg1)  ?   1'b0    :   inst_en & i_found & ~i_v;
     //取数据TLB异常    
-        assign d_refill = (d_kseg0 | d_kseg1)   ?   1'b0    :   (data_wen | data_ren) & ~d_found ;
+        assign d_refill  = (d_kseg0 | d_kseg1)  ?   1'b0    :   (data_wen | data_ren) & ~d_found ;
         assign d_invalid = (d_kseg0 | d_kseg1)  ?   1'b0    :   (data_wen | data_ren) & d_found & ~d_v;
         assign d_modify  = (d_kseg0 | d_kseg1)  ?   1'b0    :   data_wen & d_found & d_v & ~d_d;
 endmodule

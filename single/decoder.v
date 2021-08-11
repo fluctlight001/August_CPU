@@ -81,7 +81,8 @@ module decoder (
     wire op_hilo, op_excepttype;
 
     wire excepttype_is_syscall, excepttype_is_eret, excepttype_is_break, excepttype_is_instinvalid;
-    assign excepttype_o = {18'b0,excepttype_is_break,excepttype_is_eret,2'b00,excepttype_is_instinvalid,excepttype_is_syscall,8'b0};
+    wire again_flag;
+    assign excepttype_o = {18'b0,excepttype_is_break,excepttype_is_eret,2'b00,excepttype_is_instinvalid,excepttype_is_syscall,7'b0,again_flag};
     
     assign excepttype_is_syscall = inst_syscall;
     assign excepttype_is_eret = inst_eret;
@@ -348,10 +349,7 @@ module decoder (
         inst_mtc0
     };
     
-
-
-
-    
-    
+// tlb part
+    assign again_flag = inst_tlbp | inst_tlbr | inst_tlbwi; // cp0_op[4]|cp0_op[3]|cp0_op[2];
 
 endmodule
