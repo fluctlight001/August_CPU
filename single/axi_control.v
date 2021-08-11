@@ -1,7 +1,7 @@
 `include "lib/defines.vh"
 `define STAGE_WIDTH 21
 // `define TAG_WIDTH 20
-`define INDEX_WIDTH 128 // 块高
+// `define INDEX_WIDTH 128 // 块高
 // `define CACHELINE_WIDTH 256 // 块宽
 module axi_control(
     input wire clk,

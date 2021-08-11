@@ -182,7 +182,7 @@ assign r_lo1  = {6'b0,r_pfn1,r_c1,r_d1,r_v1,r_g};
 //search inst
 assign i_vpn2      = inst_vaddr[31:13];
 assign i_odd_page  = inst_vaddr[12];
-assign i_asid      = inst_vaddr[7:0];
+assign i_asid      = w_hi[7:0];
 
 wire [15:0]match0;
 assign match0[0]  = (i_vpn2==tlb_vpn2[0]) && ((i_asid == tlb_asid[0]) || tlb_g[0]);
@@ -379,7 +379,7 @@ assign  i_v   = i_odd_page ? i_v1   : i_v0;
 
 assign d_vpn2      = op_tlbp ? w_vpn2           :   data_vaddr[31:13];
 assign d_odd_page  = op_tlbp ? w_hi[12]         :   data_vaddr[12];
-assign d_asid      = op_tlbp ? w_asid           :   data_vaddr[7:0];
+assign d_asid      = op_tlbp ? w_asid           :   w_hi[7:0];
 
 wire [15:0]match1;
 assign match1[0] = (d_vpn2==tlb_vpn2[0]) && ((d_asid == tlb_asid[0]) || tlb_g[0]);
@@ -579,6 +579,8 @@ wire i_kseg0;
 assign i_kseg0 = (inst_vaddr[31:29] == 3'b100)  ?   1'b1 : 1'b0;
 assign i_kseg1 = (inst_vaddr[31:29] == 3'b101)  ?   1'b1 : 1'b0;
 assign inst_tag = (i_kseg1 | i_kseg0) ? {3'b0,inst_vaddr[28:12]}    :
+                  (i_pfn[19:17] == 3'b100) ? {3'b0,i_pfn[16:0]}   :
+                    (i_pfn[19:17] == 3'b101) ? {3'b0,i_pfn[16:0]}   :
                     i_pfn;
 assign inst_uncached =  i_kseg1     ?   1'b1            :
                         i_kseg0     ?  (i_c == 3'b010)  :
