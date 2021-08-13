@@ -121,7 +121,7 @@ module mycpu_core(
     	.clk                  (clk                  ),
         .rstn                 (~rst                 ),
 
-        .icache_ren           (icache_miss           ),
+        .icache_ren           (icache_miss          ),
         .icache_raddr         (icache_raddr         ),
         .icache_cacheline_new (icache_cacheline_new ),
         .icache_wen           (1'b0           ),
@@ -129,10 +129,10 @@ module mycpu_core(
         .icache_cacheline_old (icache_cacheline_old ),
         .icache_refresh       (icache_refresh       ),
 
-        .dcache_ren           (dcache_miss           ),
+        .dcache_ren           (dcache_miss          ),
         .dcache_raddr         (dcache_raddr         ),
         .dcache_cacheline_new (dcache_cacheline_new ),
-        .dcache_wen           (dcache_write_back           ),
+        .dcache_wen           (dcache_write_back    ),
         .dcache_waddr         (dcache_waddr         ),
         .dcache_cacheline_old (dcache_cacheline_old ),
         .dcache_refresh       (dcache_refresh       ),
@@ -249,20 +249,26 @@ module mycpu_core(
     // );
     
     cache_tag_v5 u_icache_tag(
-    	.clk        (clk        ),
-        .rst        (rst        ),
-        .flush      (flush      ),
-        .stallreq   (stallreq_from_icache   ),
-        .cached     (1'b1     ),
-        .sram_en    (inst_sram_en & ~i_refill & ~i_invalid    ),
-        .sram_addr  (inst_sram_addr_mmu),
-        .refresh    (icache_refresh    ),
-        .miss       (icache_miss       ),
-        .axi_raddr  (icache_raddr  ),
-        .write_back (icache_write_back ),
-        .axi_waddr  (icache_waddr  ),
-        .hit        (icache_hit        ),
-        .lru        (icache_lru        )
+    	.clk                (clk        ),
+        .rst                (rst        ),
+        .flush              (flush      ),
+        .stallreq           (stallreq_from_icache   ),
+        .cached             (1'b1     ),
+        .sram_en            (inst_sram_en & ~i_refill & ~i_invalid    ),
+        .sram_addr          (inst_sram_addr_mmu),
+        .refresh            (icache_refresh    ),
+        .miss               (icache_miss       ),
+        .axi_raddr          (icache_raddr  ),
+        .write_back         (icache_write_back),
+        .axi_waddr          (icache_waddr  ),
+        .hit                (icache_hit       ),
+        .lru                (icache_lru       ),
+
+        .index_invalid      (1'b0    ),
+        .index_store_tag    (1'b0  ),
+        .hit_invalid        (1'b0      ),
+        .index_wb_invalid   (1'b0 ),
+        .hit_wb_invalid     (1'b0   )
     );
 
     cache_data_v5 u_icache_data(
@@ -293,20 +299,26 @@ module mycpu_core(
     // );
     
     cache_tag_v5 u_dcache_tag(
-    	.clk        (clk        ),
-        .rst        (rst        ),
-        .flush      (flush      ),
-        .stallreq   (stallreq_from_dcache   ),
-        .cached     (~data_uncached     ),
-        .sram_en    (data_sram_en & ~d_refill & ~d_invalid & ~d_modify ),
-        .sram_addr  (data_sram_addr_mmu  ),
-        .refresh    (dcache_refresh    ),
-        .miss       (dcache_miss       ),
-        .axi_raddr  (dcache_raddr  ),
-        .write_back (dcache_write_back ),
-        .axi_waddr  (dcache_waddr  ),
-        .hit        (dcache_hit        ),
-        .lru        (dcache_lru        )
+    	.clk                (clk        ),
+        .rst                (rst        ),
+        .flush              (flush      ),
+        .stallreq           (stallreq_from_dcache   ),
+        .cached             (~data_uncached     ),
+        .sram_en            (data_sram_en & ~d_refill & ~d_invalid & ~d_modify ),
+        .sram_addr          (data_sram_addr_mmu  ),
+        .refresh            (dcache_refresh   ),
+        .miss               (dcache_miss      ),
+        .axi_raddr          (dcache_raddr  ),
+        .write_back         (dcache_write_back),
+        .axi_waddr          (dcache_waddr     ),
+        .hit                (dcache_hit       ),
+        .lru                (dcache_lru       ),
+
+        .index_invalid      (1'b0    ),
+        .index_store_tag    (1'b0  ),
+        .hit_invalid        (1'b0      ),
+        .index_wb_invalid   (1'b0 ),
+        .hit_wb_invalid     (1'b0   )
     );
     
     cache_data_v5 u_dcache_data(

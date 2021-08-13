@@ -49,6 +49,7 @@ module ex (
     wire [8:0] hilo_op_i;
     wire [4:0] mem_op_i;
     wire [5:0] cp0_op_i;
+    wire [6:0] cache_op_i;
     wire [13:0] alu_op_i;
     wire [2:0] sel_alu_src1_i;
     wire [3:0] sel_alu_src2_i;
@@ -62,6 +63,7 @@ module ex (
     wire [31:0] excepttype_i;
 
     assign {
+        cache_op_i,     // 231:225
         cp0_op_i,       // 224:219
         excepttype_i,   // 218:187
         mem_op_i,       // 186:182
@@ -86,6 +88,7 @@ module ex (
     reg [8:0] hilo_op;
     reg [4:0] mem_op;
     reg [5:0] cp0_op;
+    reg [6:0] cache_op;
     reg [13:0] alu_op;
     reg [2:0] sel_alu_src1;
     reg [3:0] sel_alu_src2;
@@ -113,6 +116,7 @@ module ex (
             hilo_op <= 9'b0;
             mem_op <= 5'b0;
             cp0_op <= 6'b0;
+            cache_op <= 7'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -134,6 +138,7 @@ module ex (
             hilo_op <= 9'b0;
             mem_op <= 5'b0;
             cp0_op <= 6'b0;
+            cache_op <= 7'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -155,6 +160,7 @@ module ex (
             hilo_op <= 9'b0;
             mem_op <= 5'b0;
             cp0_op <= 6'b0;
+            cache_op <= 7'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -176,6 +182,7 @@ module ex (
             hilo_op <= hilo_op_i;
             mem_op <= mem_op_i;
             cp0_op <= cp0_op_i;
+            cache_op <= cache_op_i;
             alu_op <= alu_op_i;
             sel_alu_src1 <= sel_alu_src1_i;
             sel_alu_src2 <= sel_alu_src2_i;
@@ -265,6 +272,7 @@ module ex (
         end
     end
     assign ex_to_dt_bus = {
+        cache_op,       // 265:259
         cp0_bus,        // 258:212
         is_in_delayslot,// 211
         bad_vaddr,      // 210:179
@@ -722,8 +730,17 @@ module ex (
         cp0_reg_wsel,   // 34:32
         cp0_reg_wdata   // 31:0
     };
-    
-
-
+// cache part
+    wire i_index_invalid, i_index_store_tag, i_hit_invalid;
+    wire d_index_wb_invalid, d_index_store_tag, d_hit_invalid, d_hit_wb_invalid;
+    assign {
+        i_index_invalid,
+        i_index_store_tag,
+        i_hit_invalid,
+        d_index_wb_invalid,
+        d_index_store_tag,
+        d_hit_invalid,
+        d_hit_wb_invalid
+    } = cache_op;
     
 endmodule

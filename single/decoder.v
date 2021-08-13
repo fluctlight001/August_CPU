@@ -9,6 +9,7 @@ module decoder (
     output wire [8:0] hilo_op,
     output wire [4:0] mem_op,
     output wire [5:0] cp0_op,
+    output wire [6:0] cache_op,
 
     output wire [2:0] sel_alu_src1, 
     output wire [3:0] sel_alu_src2,
@@ -71,8 +72,10 @@ module decoder (
     wire inst_break,    inst_syscall;
     wire inst_eret, inst_mfc0,  inst_mtc0;
     wire inst_mul;
-    wire inst_tlbp, inst_tlbr,  inst_tlbwi;
+    wire inst_tlbp, inst_tlbr,  inst_tlbwi, inst_tlbwr;
     wire inst_cache;
+    wire i_index_invalid, i_index_store_tag, i_hit_invalid;
+    wire d_index_wb_invalid, d_index_store_tag, d_hit_invalid, d_hit_wb_invalid;
 
 
     wire op_add, op_sub, op_slt, op_sltu;
@@ -102,7 +105,7 @@ module decoder (
                                         | inst_lw | inst_sb | inst_sh | inst_sw 
                                         | inst_break | inst_syscall | inst_eret 
                                         | inst_mfc0 | inst_mtc0 |
-                                        | inst_tlbp | inst_tlbr | inst_tlbwi
+                                        | inst_tlbp | inst_tlbr | inst_tlbwi | inst_tlbwr
                                         | inst_cache);
 
     decoder_6_64 u0_decoder_6_64(
@@ -200,7 +203,15 @@ module decoder (
     assign inst_tlbp    = op_d[6'b01_0000] & rs_d[5'b1_0000] & func_d[6'b00_1000];
     assign inst_tlbr    = op_d[6'b01_0000] & rs_d[5'b1_0000] & func_d[6'b00_0001];
     assign inst_tlbwi   = op_d[6'b01_0000] & rs_d[5'b1_0000] & func_d[6'b00_0010];
+    assign inst_tlbwr   = op_d[6'b01_0000] & rs_d[5'b1_0000] & func_d[6'b00_0110];
     assign inst_cache   = op_d[6'b10_1111];
+    assign i_index_invalid      = inst_cache & rt_d[5'b0_0000];
+    assign i_index_store_tag    = inst_cache & rt_d[5'b0_1000];
+    assign i_hit_invalid        = inst_cache & rt_d[5'b1_0000];
+    assign d_index_wb_invalid   = inst_cache & rt_d[5'b0_0001];
+    assign d_index_store_tag    = inst_cache & rt_d[5'b0_1001];
+    assign d_hit_invalid        = inst_cache & rt_d[5'b1_0001];
+    assign d_hit_wb_invalid     = inst_cache & rt_d[5'b1_0101];
 
 
     // rs to reg1  
@@ -212,7 +223,9 @@ module decoder (
                            | inst_xori | inst_sllv | inst_srav | inst_srlv
                            | inst_mthi | inst_mtlo 
                            | inst_lb | inst_lbu | inst_lh | inst_lhu 
-                           | inst_lw | inst_sb | inst_sh | inst_sw; 
+                           | inst_lw | inst_sb | inst_sh | inst_sw
+                           | i_index_invalid | i_index_store_tag | i_hit_invalid
+                           | d_index_wb_invalid | d_index_store_tag | d_hit_invalid | d_hit_wb_invalid; 
     // pc to reg1
     assign sel_alu_src1[1] = inst_jal | inst_bltzal | inst_bgezal | inst_jalr;
     // sa_zero_extend to reg1
@@ -230,7 +243,9 @@ module decoder (
                            | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu 
                            | inst_sw | inst_sh | inst_sb 
                            | inst_lui
-                           | inst_slti | inst_sltiu ;
+                           | inst_slti | inst_sltiu 
+                           | i_index_invalid | i_index_store_tag | i_hit_invalid
+                           | d_index_wb_invalid | d_index_store_tag | d_hit_invalid | d_hit_wb_invalid;
     // 32'd8 to reg2
     assign sel_alu_src2[2] = inst_jal | inst_bltzal | inst_bgezal | inst_jalr;
 
@@ -243,7 +258,9 @@ module decoder (
     assign op_add = inst_add | inst_addu | inst_addi | inst_addiu 
                   | inst_lw | | inst_lb | inst_lbu | inst_lh | inst_lhu 
                   | inst_sw | inst_sh | inst_sb 
-                  | inst_jal | inst_bltzal | inst_bgezal | inst_jalr;
+                  | inst_jal | inst_bltzal | inst_bgezal | inst_jalr
+                  | i_index_invalid | i_index_store_tag | i_hit_invalid
+                  | d_index_wb_invalid | d_index_store_tag | d_hit_invalid | d_hit_wb_invalid;
     assign op_sub = inst_sub | inst_subu;
     assign op_slt = inst_slt | inst_slti;
     assign op_sltu = inst_sltu | inst_sltiu;
@@ -270,10 +287,8 @@ module decoder (
         inst_lhu,
         inst_lw
     };
-    // assign sel_load_zero_extend = inst_lbu | inst_lhu;
+
     assign data_ram_en = inst_lb | inst_lbu | inst_lh | inst_lhu | inst_lw | inst_sb | inst_sh | inst_sw;
-    // wire data_ram_wen_temp;
-    // assign data_ram_wen_temp = inst_sw;
     assign data_ram_wen = {1'b0,inst_sb,inst_sh,inst_sw};
     
 
@@ -341,7 +356,7 @@ module decoder (
 
 // cp0 part
     assign cp0_op = {
-        inst_cache,
+        inst_tlbwr,
         inst_tlbp,
         inst_tlbr,  // again_flag
         inst_tlbwi, // again_flag
@@ -350,6 +365,19 @@ module decoder (
     };
     
 // tlb part
-    assign again_flag = inst_tlbp | inst_tlbr | inst_tlbwi; // cp0_op[4]|cp0_op[3]|cp0_op[2];
+    assign again_flag = inst_tlbp | inst_tlbr | inst_tlbwi      // cp0_op[4]|cp0_op[3]|cp0_op[2];
+                      | i_index_invalid 
+                      | i_index_store_tag
+                      | i_hit_invalid; 
 
+// cache part
+    assign cache_op = {
+        i_index_invalid,
+        i_index_store_tag,
+        i_hit_invalid,
+        d_index_wb_invalid,
+        d_index_store_tag,
+        d_hit_invalid,
+        d_hit_wb_invalid
+    };
 endmodule

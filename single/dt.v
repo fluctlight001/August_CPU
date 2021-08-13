@@ -9,11 +9,18 @@ module dt(
     input wire [`DATA_SRAM_WD-1:0] ex_dt_sram_bus,
 
     output reg [`DT_TO_DC_WD-1:0] dt_to_dc_bus,
+    // mem ctrl
     output wire        data_sram_en   ,
     output wire        data_sram_wen  ,
     output wire [ 3:0] data_sram_sel  ,
     output wire [31:0] data_sram_addr ,
-    output wire [31:0] data_sram_wdata
+    output wire [31:0] data_sram_wdata,
+
+    // dcache ctrl
+    output wire d_index_wb_invalid, 
+    output wire d_index_store_tag, 
+    output wire d_hit_invalid,
+    output wire d_hit_wb_invalid
 );
     reg [`DATA_SRAM_WD-1:0] ex_dt_sram_bus_r;
 
@@ -43,4 +50,11 @@ module dt(
         data_sram_addr,
         data_sram_wdata
     } = ex_dt_sram_bus_r;
+
+    assign {
+        d_index_wb_invalid,
+        d_index_store_tag,
+        d_hit_invalid,
+        d_hit_wb_invalid
+    } = dt_to_dc_bus[262:259];
 endmodule 

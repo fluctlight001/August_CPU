@@ -24,7 +24,13 @@ module cache_tag_v5(
 
     // cache_data
     output wire [`HIT_WIDTH-1:0] hit,
-    output wire lru
+    output wire lru,
+
+    input wire index_invalid,
+    input wire index_store_tag,
+    input wire hit_invalid,
+    input wire index_wb_invalid,
+    input wire hit_wb_invalid
 );
     reg [`TAG_WIDTH-1:0] tag_way0 [`INDEX_WIDTH-1:0]; // v + tag 
     reg [`TAG_WIDTH-1:0] tag_way1 [`INDEX_WIDTH-1:0];
@@ -145,6 +151,12 @@ module cache_tag_v5(
         else if (refresh&(~lru_r[index])) begin
             tag_way0[index] <= {cached_v,tag};
         end
+        else if ((index_invalid|index_wb_invalid) & ~tag[0]) begin
+            tag_way0[index] <= 21'b0;
+        end
+        else if ((hit_invalid|hit_wb_invalid) & hit_way0) begin
+            tag_way0[index] <= 21'b0;
+        end
     end
 
     // way1
@@ -218,16 +230,24 @@ module cache_tag_v5(
         else if (refresh&lru_r[index]) begin
             tag_way1[index] <= {cached_v,tag};
         end
+        else if (index_invalid & tag[0]) begin
+            tag_way1[index] <= 21'b0;
+        end
+        else if (hit_invalid & hit_way1) begin
+            tag_way1[index] <= 21'b0;
+        end
     end
 
     // assign hit = cached_v & sram_en & ({1'b1,tag} == tag_ram_out);
-    assign lru = lru_r[index];
+    assign lru = index_wb_invalid ? tag[0] 
+               : hit_wb_invalid & (hit_way0|hit_way1) ? hit_way0 ? 1'b0 : 1'b1 
+               : lru_r[index];
     assign hit = {
-        hit_way1,
-        hit_way0
+        ~flush & cached_v & sram_en & hit_way1,
+        ~flush & cached_v & sram_en & hit_way0
     };
-    assign hit_way0 = ~flush & cached_v & sram_en & ({1'b1,tag} == tag_way0[index]);
-    assign hit_way1 = ~flush & cached_v & sram_en & ({1'b1,tag} == tag_way1[index]);
+    assign hit_way0 = ({1'b1,tag} == tag_way0[index]);
+    assign hit_way1 = ({1'b1,tag} == tag_way1[index]);
     assign miss = cached_v & sram_en & ~(hit_way0|hit_way1) & ~flush;
     assign stallreq = miss;
     assign axi_raddr = cached_v ? {sram_addr[31:6],6'b0} : sram_addr;
