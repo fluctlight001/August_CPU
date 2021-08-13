@@ -4,7 +4,7 @@ module tlb #(
     (
     input wire clk,
     input wire resetn,
-
+    input wire [2:0] k0,
     //tlb write
     input wire          we,
     input wire [3:0]    w_index,
@@ -23,10 +23,10 @@ module tlb #(
 
     //tlb search port data
     input wire          data_ren,
-    input wire          data_wen,
-    input wire  [31:0]  data_vaddr,
-    output wire         data_uncached,
-    output wire [19:0]  data_tag,
+    (*mark_debug="true"*)input wire          data_wen,
+    (*mark_debug="true"*)input wire  [31:0]  data_vaddr,
+    (*mark_debug="true"*)output wire         data_uncached,
+    (*mark_debug="true"*)output wire [19:0]  data_tag,
 
     output wire [31:0]  p_index,
 
@@ -574,33 +574,42 @@ assign  d_v   = d_odd_page ? d_v1   : d_v0;
 
 
 //-------------------MMU------------------------------
-wire i_kseg1;
 wire i_kseg0;
+wire i_kseg1;
+wire i_kseg2;
+wire i_kseg3;
+wire i_kuseg;
 assign i_kseg0 = (inst_vaddr[31:29] == 3'b100)  ?   1'b1 : 1'b0;
 assign i_kseg1 = (inst_vaddr[31:29] == 3'b101)  ?   1'b1 : 1'b0;
+assign i_kseg2 = (inst_vaddr[31:29] == 3'b110)  ?   1'b1 : 1'b0;
+assign i_kseg3 = (inst_vaddr[31:29] == 3'b111)  ?   1'b1 : 1'b0;
+assign i_kuseg = (inst_vaddr[31] == 1'b1)       ?   1'b0 : 1'b1;
 assign inst_tag = (i_kseg1 | i_kseg0) ? {3'b0,inst_vaddr[28:12]}    :
-                  (i_pfn[19:17] == 3'b100) ? {3'b0,i_pfn[16:0]}   :
-                    (i_pfn[19:17] == 3'b101) ? {3'b0,i_pfn[16:0]}   :
                     i_pfn;
-assign inst_uncached =  i_kseg1     ?   1'b1            :
-                        i_kseg0     ?  (i_c == 3'b010)  :
-                        1'b0;
-wire d_kseg1;
-
+assign inst_uncached =  i_kseg1     ?   1'b1                :
+                        i_kseg0     ?   !(k0 == 3'b011)     :
+                        i_kseg2     ?   !(i_c == 3'b011)    :
+                        i_kseg3     ?   !(i_c == 3'b011)    :
+                        i_kuseg     ?   !(i_c == 3'b011)    :
+                        1'b1;
 wire d_kseg0;
+wire d_kseg1;
+wire d_kseg2;
+wire d_kseg3;
+wire d_kuseg;
 assign d_kseg0 = (data_vaddr[31:29] == 3'b100)  ?   1'b1    :   1'b0;
 assign d_kseg1 = (data_vaddr[31:29] == 3'b101)  ?   1'b1    :   1'b0;
-wire d_kseg0_p;
-wire d_kseg1_p;
-assign d_kseg0_p = (d_pfn0[19:17] == 3'b100) ? 1'b1 : 1'b0;
-assign d_kseg1_p = (d_pfn1[19:17] == 3'b101) ? 1'b1 : 1'b0;
+assign d_kseg2 = (data_vaddr[31:29] == 3'b110)  ?   1'b1    :   1'b0;
+assign d_kseg3 = (data_vaddr[31:29] == 3'b111)  ?   1'b1    :   1'b0;
+assign d_kuseg = (data_vaddr[31]    == 1'b1)    ?   1'b0    :   1'b1;
 assign data_tag = (d_kseg0 | d_kseg1) ? {3'b0,data_vaddr[28:12]}    :
-                    (d_pfn[19:17] == 3'b100) ? {3'b0,d_pfn[16:0]}   :
-                    (d_pfn[19:17] == 3'b101) ? {3'b0,d_pfn[16:0]}   :
                     d_pfn;
-assign data_uncached = (d_kseg1_p | d_kseg1)      ? 1'b1              :
-                        (d_kseg0_p | d_kseg0_p)     ? (d_c == 3'b010)   :
-                        1'b0;
+assign data_uncached = d_kseg1  ?   1'b1                :
+                        d_kseg0 ?   1'b1                :
+                        d_kseg2 ?   !(d_c == 3'b011)    :
+                        d_kseg3 ?   !(d_c == 3'b011)    :
+                        d_kuseg ?   !(d_c == 3'b011)    :
+                        1'b1;
 //-------------------MMU------------------------------
 //--------------tlb 指令-------------------
 assign p_index = d_found ? d_index : {1'b1,31'b0};

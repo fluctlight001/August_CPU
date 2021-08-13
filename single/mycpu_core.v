@@ -194,6 +194,9 @@ module mycpu_core(
     wire i_refill, i_invalid, d_refill, d_invalid, d_modify;
 
     wire op_tlbp, op_tlbr, op_tlbwi;
+    wire [2:0]  k0;
+    wire [31:0] config_o;
+    assign k0 = config_o[2:0];
     tlb 
     #(
         .TLBNUM (16)
@@ -201,6 +204,7 @@ module mycpu_core(
     u_tlb(
     	.clk           (clk           ),
         .resetn        (~rst          ),
+        .k0            (k0            ),
 
         .we            (op_tlbwi             ),
         .w_index       (cp0_index[3:0]       ),
@@ -697,6 +701,7 @@ module mycpu_core(
         .status_o          (cp0_status        ),
         .cause_o           (cp0_cause         ),
         .epc_o             (cp0_epc           ),
+        .config_o          (config_o          ),
 
         .excepttype_i      (mem_to_wb_bus[167:136]       ),
         .pc_i              (mem_to_wb_bus[69:38]         ),
