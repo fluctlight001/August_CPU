@@ -605,7 +605,7 @@ assign d_kuseg = (data_vaddr[31]    == 1'b1)    ?   1'b0    :   1'b1;
 assign data_tag = (d_kseg0 | d_kseg1) ? {3'b0,data_vaddr[28:12]}    :
                     d_pfn;
 assign data_uncached = d_kseg1  ?   1'b1                :
-                        d_kseg0 ?   1'b1                :
+                        d_kseg0 ?   !(k0 == 3'b011)     :
                         d_kseg2 ?   !(d_c == 3'b011)    :
                         d_kseg3 ?   !(d_c == 3'b011)    :
                         d_kuseg ?   !(d_c == 3'b011)    :
