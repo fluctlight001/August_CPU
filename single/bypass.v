@@ -12,19 +12,22 @@ module bypass(
     input wire ex_we,
     input wire [`RegAddrBus] ex_waddr,
     input wire [`RegBus] ex_wdata,
-    input wire [4:0] ex_ram_ctrl,
+    input wire [6:0] ex_ram_ctrl,
 
     input wire dt_we,
     input wire [`RegAddrBus] dt_waddr,
     input wire [`RegBus] dt_wdata,
-    input wire [4:0] dt_ram_ctrl,
+    input wire [6:0] dt_ram_ctrl,
 
     input wire dcache_we,
     input wire [`RegAddrBus] dcache_waddr,
     input wire [`RegBus] dcache_wdata,
-    input wire [4:0] dc_ram_ctrl,
-    input wire [4:0] dc_mem_op,
+    input wire [6:0] dc_ram_ctrl,
+    input wire [6:0] dc_mem_op,
     input wire [31:0] data_sram_rdata,
+
+    input wire [4:0] dc_rt_rf_raddr,
+    input wire [31:0] dc_rt_rf_rdata,
 
     input wire mem_we,
     input wire [`RegAddrBus] mem_waddr,
@@ -76,8 +79,10 @@ module bypass(
     wire [`RegBus] rs_forward_data, rt_forward_data;
     wire ex_is_load, dt_is_load, dc_is_load;
     // wire stallreq_for_load_next;
-    wire op_load, inst_lb, inst_lbu, inst_lh, inst_lhu, inst_lw;
+    wire op_load, inst_lb, inst_lbu, inst_lh, inst_lhu, inst_lw, inst_lwl, inst_lwr;
     assign {
+        inst_lwl,
+        inst_lwr,
         inst_lb,
         inst_lbu,
         inst_lh,
@@ -85,6 +90,9 @@ module bypass(
         inst_lw
     } = dc_mem_op;
     assign op_load = |dc_mem_op;
+
+    wire [31:0] reg2;
+    assign reg2 = mem_we & (mem_waddr == dc_rt_rf_raddr) ? mem_wdata : dc_rt_rf_rdata;
 
     reg [31:0] mem_result;
     reg [31:0] mem_result_r;
@@ -160,6 +168,44 @@ module bypass(
             inst_lw:begin
                 mem_result = data_sram_rdata;
             end
+            inst_lwl:begin
+                case(dcache_wdata[1:0])
+                    2'b00:begin
+                        mem_result = {data_sram_rdata[7:0],reg2[23:0]};
+                    end
+                    2'b01:begin
+                        mem_result = {data_sram_rdata[15:0],reg2[15:0]};
+                    end
+                    2'b10:begin
+                        mem_result = {data_sram_rdata[23:0],reg2[7:0]};
+                    end
+                    2'b11:begin
+                        mem_result = data_sram_rdata;
+                    end
+                    default:begin
+                        mem_result = 32'b0;
+                    end
+                endcase
+            end
+            inst_lwr:begin
+                case(dcache_wdata[1:0])
+                    2'b00:begin
+                        mem_result = data_sram_rdata;
+                    end
+                    2'b01:begin
+                        mem_result = {reg2[31:24],data_sram_rdata[23:0]};
+                    end
+                    2'b10:begin
+                        mem_result = {reg2[31:16],data_sram_rdata[15:0]};
+                    end
+                    2'b11:begin
+                        mem_result = {reg2[31:8],data_sram_rdata[7:0]};
+                    end
+                    default:begin
+                        mem_result = 32'b0;
+                    end
+                endcase
+            end
             default:begin
                 mem_result = 32'b0;
             end
@@ -209,9 +255,9 @@ module bypass(
                            : rt_mem_ok ? mem_wdata
                            : 32'b0;
 
-    assign ex_is_load = ex_ram_ctrl[4] & ~(|ex_ram_ctrl[3:0]);
-    assign dt_is_load = dt_ram_ctrl[4] & ~(|dt_ram_ctrl[3:0]);
-    assign dc_is_load = dc_ram_ctrl[4] & ~(|dc_ram_ctrl[3:0]);
+    assign ex_is_load = ex_ram_ctrl[6] & ~(|ex_ram_ctrl[5:0]);
+    assign dt_is_load = dt_ram_ctrl[6] & ~(|dt_ram_ctrl[5:0]);
+    assign dc_is_load = dc_ram_ctrl[6] & ~(|dc_ram_ctrl[5:0]);
 
     assign stallreq_for_load = (ex_is_load & (rs_ex_ok|rt_ex_ok)) | (dt_is_load & (rs_dt_ok|rt_dt_ok));// | (dc_is_load & (rs_dcache_ok|rt_dcache_ok));
     // assign stallreq_for_load = stallreq_for_load_next;

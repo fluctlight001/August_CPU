@@ -497,6 +497,8 @@ module mycpu_core(
     wire rf_we;
     wire [`RegAddrBus] rf_waddr;
     wire [`RegBus] rf_wdata;
+    wire [4:0] mem_raddr, bypass_raddr;
+    wire [31:0] mem_rdata, bypass_rdata;
     
     id u_id(
     	.clk          (clk              ),
@@ -512,7 +514,11 @@ module mycpu_core(
         .wb_rf_wdata  (rf_wdata         ),
         .id_to_ex_bus (id_to_ex_bus     ),
         .rs_rf_raddr  (rs_rf_raddr      ),
-        .rt_rf_raddr  (rt_rf_raddr      )
+        .rt_rf_raddr  (rt_rf_raddr      ),
+        .mem_raddr    (mem_raddr        ),
+        .mem_rdata    (mem_rdata        ),
+        .bypass_raddr (bypass_raddr     ),
+        .bypass_rdata (bypass_rdata     )
     );
 
     wire [31:0] rs_forward_data;
@@ -586,7 +592,9 @@ module mycpu_core(
         .cp0_epc         (cp0_epc         ),
         .op_tlbp         (op_tlbp         ),
         .op_tlbr         (op_tlbr         ),
-        .op_tlbwi        (op_tlbwi        )
+        .op_tlbwi        (op_tlbwi        ),
+        .rt_rf_raddr     (mem_raddr       ),
+        .rt_rf_rdata     (mem_rdata       )
     );
     
 
@@ -618,6 +626,7 @@ module mycpu_core(
     );
     
     wire stallreq_for_load;
+    assign bypass_raddr = dc_to_mem_bus[274:240];
     bypass u_bypass(
         .clk               (clk                   ),
         .rst               (rst                   ),
@@ -630,17 +639,19 @@ module mycpu_core(
         .ex_we             (ex_to_dt_bus[37]      ),
         .ex_waddr          (ex_to_dt_bus[36:32]   ),
         .ex_wdata          (ex_to_dt_bus[31:0]    ),
-        .ex_ram_ctrl       (ex_to_dt_bus[43:39]   ),
+        .ex_ram_ctrl       ({ex_to_dt_bus[43:39],ex_to_dt_bus[267:266]}   ),
         .dt_we             (dt_to_dc_bus[37]      ),
         .dt_waddr          (dt_to_dc_bus[36:32]   ),
         .dt_wdata          (dt_to_dc_bus[31:0]    ),
-        .dt_ram_ctrl       (dt_to_dc_bus[43:39]   ),
+        .dt_ram_ctrl       ({dt_to_dc_bus[43:39],dt_to_dc_bus[267:266]}   ),
         .dcache_we         (dc_to_mem_bus[37]     ),
         .dcache_waddr      (dc_to_mem_bus[36:32]  ),
         .dcache_wdata      (dc_to_mem_bus[31:0]   ),
-        .dc_ram_ctrl       (dc_to_mem_bus[43:39]  ),
-        .dc_mem_op         (dc_to_mem_bus[146:142]),
+        .dc_ram_ctrl       ({dc_to_mem_bus[43:39],dc_to_mem_bus[267:266]} ),
+        .dc_mem_op         ({dc_to_mem_bus[269:268],dc_to_mem_bus[146:142]}),
         .data_sram_rdata   (data_sram_rdata       ),
+        .dc_rt_rf_raddr    (bypass_raddr          ),
+        .dc_rt_rf_rdata       (bypass_rdata          ),
         .mem_we            (mem_to_wb_bus[37]     ),
         .mem_waddr         (mem_to_wb_bus[36:32]  ),
         .mem_wdata         (mem_to_wb_bus[31:0]   ),

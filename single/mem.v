@@ -18,7 +18,11 @@ module mem(
     // tlb
     output wire op_tlbp,
     output wire op_tlbr,
-    output wire op_tlbwi
+    output wire op_tlbwi,
+
+    // lwl&lwr
+    output wire [4:0] rt_rf_raddr,
+    input wire [31:0] rt_rf_rdata
 );
 
     reg [`DC_TO_MEM_WD-1:0] dc_to_mem_bus_r;
@@ -73,8 +77,13 @@ module mem(
     wire [31:0] bad_vaddr;
     wire is_in_delayslot;
     wire [46:0] cp0_bus;
+    wire [6:0] cache_op;
+    wire [3:0] extra_mem_op;
     
     assign {
+        rt_rf_raddr,    // 274:270
+        extra_mem_op,   // 269:266
+        cache_op,       // 265:259
         cp0_bus,        // 258:212
         is_in_delayslot,// 211
         bad_vaddr,      // 210:179
@@ -99,9 +108,17 @@ module mem(
         inst_lw
     } = mem_op;
 
+    wire inst_lwl, inst_lwr, inst_swl, inst_swr;
+    assign {
+        inst_lwl,
+        inst_lwr,
+        inst_swl,
+        inst_swr
+    } = extra_mem_op;
+
     wire op_load, op_store;
-    assign op_load = |mem_op;
-    assign op_store = |data_ram_wen;
+    assign op_load = |mem_op | inst_lwl | inst_lwr;
+    assign op_store = |data_ram_wen | inst_swl | inst_swr;
 
         
     reg [31:0] excepttype_o;
@@ -203,6 +220,44 @@ module mem(
             end
             inst_lw:begin
                 mem_result_r = data_sram_rdata_r;
+            end
+            inst_lwl:begin
+                case(alu_result[1:0])
+                    2'b00:begin
+                        mem_result_r = {data_sram_rdata_r[7:0],rt_rf_rdata[23:0]};
+                    end
+                    2'b01:begin
+                        mem_result_r = {data_sram_rdata_r[15:0],rt_rf_rdata[15:0]};
+                    end
+                    2'b10:begin
+                        mem_result_r = {data_sram_rdata_r[23:0],rt_rf_rdata[7:0]};
+                    end
+                    2'b11:begin
+                        mem_result_r = data_sram_rdata_r;
+                    end
+                    default:begin
+                        mem_result_r = 32'b0;
+                    end
+                endcase
+            end
+            inst_lwr:begin
+                case(alu_result[1:0])
+                    2'b00:begin
+                        mem_result_r = data_sram_rdata_r;
+                    end
+                    2'b01:begin
+                        mem_result_r = {rt_rf_rdata[31:24],data_sram_rdata_r[23:0]};
+                    end
+                    2'b10:begin
+                        mem_result_r = {rt_rf_rdata[31:16],data_sram_rdata_r[15:0]};
+                    end
+                    2'b11:begin
+                        mem_result_r = {rt_rf_rdata[31:8],data_sram_rdata_r[7:0]};
+                    end
+                    default:begin
+                        mem_result_r = 32'b0;
+                    end
+                endcase
             end
             default:begin
                 mem_result_r = 32'b0;

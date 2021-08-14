@@ -238,7 +238,9 @@ void vfs_init() {
     auto* exe = fs->root->first_child->search("/proc/self/exe");
     assert(exe != nullptr);
 }
+#define CLINT_BASE_ADDR     (0x02000000U)
 
+volatile clint_t *const clint = (volatile clint_t *)CLINT_BASE_ADDR;
 int main() {
     printf("   _____            _____               \n"
            "  / ____|          / ____|              \n"
@@ -275,13 +277,14 @@ int main() {
     // ans = mktime_set(2020,1,1,0,0,0);
     // printf("%d\n",ans);
     timespec ts;
-    rtc_timer_set(2021,8,12,8,51,0);
+    // rtc_timer_set(2021,8,12,8,51,0);
     // uint64 start = clint_get_time();
     // uint64 end = clint_get_time();
     // uint64 start1 = timer();
     // uint64 end1 = timer();
     // start = clint_get_time();
     // start1 = timer();
+    uint64 a,b;
     while(1){
         // current_timespec(&ts);
         sys_clock_gettime(CLOCK_REALTIME,&ts);
@@ -293,6 +296,13 @@ int main() {
         sys_clock_gettime(CLOCK_MONOTONIC,&ts);
         printf("%d %d\n",ts.tv_sec,ts.tv_nsec);
         
+        // uint64_t clint_usec =
+        // clint->mtime * 1000 /
+        // (sysctl_clock_get_freq(SYSCTL_CLOCK_CPU) / 50 / 1000000UL );
+
+        // a = clint_usec / 1000000000UL;
+        // b = clint_usec % 1000000000UL;
+        // printf("%d %d\n", a, b);
         sleep(1);
     }
  

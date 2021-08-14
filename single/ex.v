@@ -51,6 +51,8 @@ module ex (
     wire [5:0] cp0_op_i;
     wire [6:0] cache_op_i;
     wire branch_likely_i;
+    wire [3:0] extra_mem_op_i;
+    wire [4:0] rt_rf_raddr_i;
     wire [13:0] alu_op_i;
     wire [2:0] sel_alu_src1_i;
     wire [3:0] sel_alu_src2_i;
@@ -66,6 +68,8 @@ module ex (
     reg branch_likely;
 
     assign {
+        rt_rf_raddr_i,  // 241:237
+        extra_mem_op_i, // 236:233
         branch_likely_i,// 232
         cache_op_i,     // 231:225
         cp0_op_i,       // 224:219
@@ -93,6 +97,8 @@ module ex (
     reg [4:0] mem_op;
     reg [5:0] cp0_op;
     reg [6:0] cache_op;
+    reg [3:0] extra_mem_op;
+    reg [4:0] rt_rf_raddr;
     // reg branch_likely;
     reg [13:0] alu_op;
     reg [2:0] sel_alu_src1;
@@ -123,6 +129,8 @@ module ex (
             cp0_op <= 6'b0;
             cache_op <= 7'b0;
             branch_likely <= 1'b0;
+            extra_mem_op <= 4'b0;
+            rt_rf_raddr <= 5'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -146,6 +154,8 @@ module ex (
             cp0_op <= 6'b0;
             cache_op <= 7'b0;
             branch_likely <= 1'b0;
+            extra_mem_op <= 4'b0;
+            rt_rf_raddr <= 5'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -169,6 +179,8 @@ module ex (
             cp0_op <= 6'b0;
             cache_op <= 7'b0;
             branch_likely <= 1'b0;
+            extra_mem_op <= 4'b0;
+            rt_rf_raddr <= 5'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -192,6 +204,8 @@ module ex (
             cp0_op <= cp0_op_i;
             cache_op <= cache_op_i;
             branch_likely <= branch_likely_i;
+            extra_mem_op <= extra_mem_op_i;
+            rt_rf_raddr <= rt_rf_raddr_i;
             alu_op <= alu_op_i;
             sel_alu_src1 <= sel_alu_src1_i;
             sel_alu_src2 <= sel_alu_src2_i;
@@ -281,6 +295,8 @@ module ex (
         end
     end
     assign ex_to_dt_bus = {
+        rt_rf_raddr,    // 274:270
+        extra_mem_op,   // 269:266
         cache_op,       // 265:259
         cp0_bus,        // 258:212
         is_in_delayslot,// 211
@@ -404,6 +420,14 @@ module ex (
         inst_lw
     } = mem_op;
 
+    wire inst_lwl, inst_lwr, inst_swl, inst_swr;
+    assign {
+        inst_lwl,
+        inst_lwr,
+        inst_swl,
+        inst_swr
+    } = extra_mem_op;
+
     reg data_sram_wen_r;
     reg [3:0] data_sram_sel_r;
     reg [31:0] data_sram_wdata_r;
@@ -451,6 +475,48 @@ module ex (
                 data_sram_wdata_r <= 32'b0;
                 data_sram_sel_r = 4'b1111;
             end
+            inst_lwl:begin
+                data_sram_wen_r <= 1'b0;
+                data_sram_wdata_r <= 32'b0;
+                case(alu_result[1:0])
+                    2'b00:begin
+                        data_sram_sel_r = 4'b0001;
+                    end
+                    2'b01:begin
+                        data_sram_sel_r = 4'b0011;
+                    end
+                    2'b10:begin
+                        data_sram_sel_r = 4'b0111;
+                    end
+                    2'b11:begin
+                        data_sram_sel_r = 4'b1111;
+                    end
+                    default:begin
+                        data_sram_sel_r = 4'b0;
+                    end
+                endcase
+            end
+            inst_lwr:begin
+                data_sram_wen_r <= 1'b0;
+                data_sram_wdata_r <= 32'b0;
+                case(alu_result[1:0])
+                    2'b00:begin
+                        data_sram_sel_r = 4'b1111;
+                    end
+                    2'b01:begin
+                        data_sram_sel_r = 4'b1110;
+                    end
+                    2'b10:begin
+                        data_sram_sel_r = 4'b1100;
+                    end
+                    2'b11:begin
+                        data_sram_sel_r = 4'b1000;
+                    end
+                    default:begin
+                        data_sram_sel_r = 4'b0;
+                    end
+                endcase
+            end
             inst_sb:begin
                 data_sram_wen_r <= 1'b1;
                 data_sram_wdata_r = {4{rf_rdata2_bp[7:0]}};
@@ -491,6 +557,48 @@ module ex (
                 data_sram_wen_r <= 1'b1;
                 data_sram_wdata_r = rf_rdata2_bp;
                 data_sram_sel_r = 4'b1111;
+            end
+            inst_swl:begin
+                data_sram_wen_r <= 1'b1;
+                data_sram_wdata_r = rf_rdata2_bp;
+                case(alu_result[1:0])
+                    2'b00:begin
+                        data_sram_sel_r = 4'b0001;
+                    end
+                    2'b01:begin
+                        data_sram_sel_r = 4'b0011;
+                    end
+                    2'b10:begin
+                        data_sram_sel_r = 4'b0111;
+                    end
+                    2'b11:begin
+                        data_sram_sel_r = 4'b1111;
+                    end
+                    default:begin
+                        data_sram_sel_r = 4'b0;
+                    end
+                endcase
+            end
+            inst_swr:begin
+                data_sram_wen_r <= 1'b1;
+                data_sram_wdata_r = rf_rdata2_bp;
+                case(alu_result[1:0])
+                    2'b00:begin
+                        data_sram_sel_r = 4'b1111;
+                    end
+                    2'b01:begin
+                        data_sram_sel_r = 4'b1110;
+                    end
+                    2'b10:begin
+                        data_sram_sel_r = 4'b1100;
+                    end
+                    2'b11:begin
+                        data_sram_sel_r = 4'b1000;
+                    end
+                    default:begin
+                        data_sram_sel_r = 4'b0;
+                    end
+                endcase
             end
             default:begin
                 data_sram_wen_r <= 1'b0;
