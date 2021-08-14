@@ -50,6 +50,7 @@ module ex (
     wire [4:0] mem_op_i;
     wire [5:0] cp0_op_i;
     wire [6:0] cache_op_i;
+    wire branch_likely_i;
     wire [13:0] alu_op_i;
     wire [2:0] sel_alu_src1_i;
     wire [3:0] sel_alu_src2_i;
@@ -62,7 +63,10 @@ module ex (
     wire [31:0] rf_rdata1_i, rf_rdata2_i;
     wire [31:0] excepttype_i;
 
+    reg branch_likely;
+
     assign {
+        branch_likely_i,// 232
         cache_op_i,     // 231:225
         cp0_op_i,       // 224:219
         excepttype_i,   // 218:187
@@ -81,7 +85,7 @@ module ex (
         sel_rf_res_i,   // 64
         rf_rdata1_i,    // 63:32
         rf_rdata2_i     // 31:0
-    } = id_to_ex_bus;
+    } = branch_likely&~br_bus[33] ? `ID_TO_EX_WD'b0 : id_to_ex_bus;
 
     reg [31:0] pc,inst;
     reg [11:0] br_op;
@@ -89,6 +93,7 @@ module ex (
     reg [4:0] mem_op;
     reg [5:0] cp0_op;
     reg [6:0] cache_op;
+    // reg branch_likely;
     reg [13:0] alu_op;
     reg [2:0] sel_alu_src1;
     reg [3:0] sel_alu_src2;
@@ -117,6 +122,7 @@ module ex (
             mem_op <= 5'b0;
             cp0_op <= 6'b0;
             cache_op <= 7'b0;
+            branch_likely <= 1'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -139,6 +145,7 @@ module ex (
             mem_op <= 5'b0;
             cp0_op <= 6'b0;
             cache_op <= 7'b0;
+            branch_likely <= 1'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -161,6 +168,7 @@ module ex (
             mem_op <= 5'b0;
             cp0_op <= 6'b0;
             cache_op <= 7'b0;
+            branch_likely <= 1'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -183,6 +191,7 @@ module ex (
             mem_op <= mem_op_i;
             cp0_op <= cp0_op_i;
             cache_op <= cache_op_i;
+            branch_likely <= branch_likely_i;
             alu_op <= alu_op_i;
             sel_alu_src1 <= sel_alu_src1_i;
             sel_alu_src2 <= sel_alu_src2_i;

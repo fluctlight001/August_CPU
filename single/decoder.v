@@ -10,6 +10,7 @@ module decoder (
     output wire [4:0] mem_op,
     output wire [5:0] cp0_op,
     output wire [6:0] cache_op,
+    output wire branch_likely,
 
     output wire [2:0] sel_alu_src1, 
     output wire [3:0] sel_alu_src2,
@@ -76,6 +77,7 @@ module decoder (
     wire inst_cache;
     wire i_index_invalid, i_index_store_tag, i_hit_invalid;
     wire d_index_wb_invalid, d_index_store_tag, d_hit_invalid, d_hit_wb_invalid;
+    wire inst_beql, inst_bgezall, inst_bgezl, inst_bgtzl, inst_blezl, inst_bltzall, inst_bltzl, inst_bnel;
 
 
     wire op_add, op_sub, op_slt, op_sltu;
@@ -106,7 +108,8 @@ module decoder (
                                         | inst_break | inst_syscall | inst_eret 
                                         | inst_mfc0 | inst_mtc0 |
                                         | inst_tlbp | inst_tlbr | inst_tlbwi | inst_tlbwr
-                                        | inst_cache);
+                                        | inst_cache
+                                        | inst_beql | inst_bgezall | inst_bgezl | inst_bgtzl | inst_blezl | inst_bltzall | inst_bltzl | inst_bnel);
 
     decoder_6_64 u0_decoder_6_64(
     	.in  (opcode),
@@ -166,18 +169,27 @@ module decoder (
     assign inst_srlv    = op_d[6'b00_0000] & func_d[6'b00_0110];
     assign inst_srl     = op_d[6'b00_0000] & func_d[6'b00_0010];
 
-    assign inst_beq     = op_d[6'b00_0100];
-    assign inst_bne     = op_d[6'b00_0101];
-    assign inst_bgez    = op_d[6'b00_0001] & rt_d[5'b0_0001];
-    assign inst_bgtz    = op_d[6'b00_0111];
-    assign inst_blez    = op_d[6'b00_0110];
-    assign inst_bltz    = op_d[6'b00_0001] & rt_d[5'b0_0000];
-    assign inst_bgezal  = op_d[6'b00_0001] & rt_d[5'b1_0001];
-    assign inst_bltzal  = op_d[6'b00_0001] & rt_d[5'b1_0000];
+    assign inst_beq     = op_d[6'b00_0100]                      | inst_beql;
+    assign inst_bne     = op_d[6'b00_0101]                      | inst_bnel;
+    assign inst_bgez    = op_d[6'b00_0001] & rt_d[5'b0_0001]    | inst_bgezl;
+    assign inst_bgtz    = op_d[6'b00_0111]                      | inst_bgtzl;
+    assign inst_blez    = op_d[6'b00_0110]                      | inst_blezl;
+    assign inst_bltz    = op_d[6'b00_0001] & rt_d[5'b0_0000]    | inst_bltzl;
+    assign inst_bgezal  = op_d[6'b00_0001] & rt_d[5'b1_0001]    | inst_bgezall;
+    assign inst_bltzal  = op_d[6'b00_0001] & rt_d[5'b1_0000]    | inst_bltzall;
     assign inst_j       = op_d[6'b00_0010];
     assign inst_jal     = op_d[6'b00_0011];
     assign inst_jr      = op_d[6'b00_0000] & func_d[6'b00_1000];
     assign inst_jalr    = op_d[6'b00_0000] & func_d[6'b00_1001];
+
+    assign inst_beql    = op_d[6'b01_0100];
+    assign inst_bgezall = op_d[6'b00_0001] & rt_d[5'b1_0011];
+    assign inst_bgezl   = op_d[6'b00_0001] & rt_d[5'b0_0011];
+    assign inst_bgtzl   = op_d[6'b01_0111] & rt_d[5'b0_0000];
+    assign inst_blezl   = op_d[6'b01_0110] & rt_d[5'b0_0000];
+    assign inst_bltzall = op_d[6'b00_0001] & rt_d[5'b1_0010];
+    assign inst_bltzl   = op_d[6'b00_0001] & rt_d[5'b0_0010];
+    assign inst_bnel    = op_d[6'b01_0101];
 
     assign inst_mfhi    = op_d[6'b00_0000] & func_d[6'b01_0000];
     assign inst_mflo    = op_d[6'b00_0000] & func_d[6'b01_0010];
@@ -346,6 +358,8 @@ module decoder (
         inst_jr,
         inst_jalr
     };
+
+    assign branch_likely = inst_beql | inst_bgezall | inst_bgezl | inst_bgtzl | inst_blezl | inst_bltzall | inst_bltzl | inst_bnel;
 
 // hilo part
     assign hilo_op = {
