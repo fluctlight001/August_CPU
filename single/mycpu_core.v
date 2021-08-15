@@ -97,6 +97,17 @@ module mycpu_core(
     wire [`CACHELINE_WIDTH-1:0] dcache_cacheline_new;
     wire [`CACHELINE_WIDTH-1:0] dcache_cacheline_old;
 
+    // unicache tag
+    wire unicache_refresh;
+    wire unicache_en;
+    wire unicache_wen;
+    wire [3:0] unicache_sel;
+    wire [31:0] unicache_addr;
+    wire unicache_hit;
+
+    // unicache data
+    wire [31:0] unicache_rdata;
+
     // uncache tag
     wire uncache_refresh;
     wire uncache_en;
@@ -114,6 +125,7 @@ module mycpu_core(
     wire [`InstAddrBus] new_pc;
     
     wire stallreq_from_icache;
+    wire stallreq_from_unicache;
     wire stallreq_from_dcache;
     wire stallreq_from_uncache;
 
@@ -136,6 +148,14 @@ module mycpu_core(
         .dcache_waddr         (dcache_waddr         ),
         .dcache_cacheline_old (dcache_cacheline_old ),
         .dcache_refresh       (dcache_refresh       ),
+
+        .unicache_en           (unicache_en           ),
+        .unicache_wen          (unicache_wen          ),
+        .unicache_sel          (unicache_sel          ),
+        .unicache_addr         (unicache_addr         ),
+        .unicache_wdata        (inst_sram_wdata      ),
+        .unicache_rdata        (unicache_rdata        ),
+        .unicache_refresh      (unicache_refresh      ),
 
         .uncache_en           (uncache_en           ),
         .uncache_wen          (uncache_wen          ),
@@ -216,7 +236,7 @@ module mycpu_core(
 
         .inst_en       (inst_sram_en       ),
         .inst_vaddr    (inst_sram_addr     ),
-        .inst_uncached (inst_uncached ),    //  1 - uncached | 0 - cached
+        // .inst_uncached (inst_uncached ),    //  1 - uncached | 0 - cached
         .inst_tag      (inst_tag      ),
 
         .data_ren      (data_sram_en&~data_sram_wen),
@@ -242,9 +262,12 @@ module mycpu_core(
         .r_lo0         (tlb_entrylo0         ),
         .r_lo1         (tlb_entrylo1         )
     );
+    assign inst_uncached = 1'b0;
     
 
     wire [31:0] inst_sram_addr_mmu;
+    wire [31:0] icache_temp_rdata;
+    wire [31:0] unicache_temp_rdata;
     assign inst_sram_addr_mmu = {inst_tag,inst_sram_addr[11:0]};
     // mmu u_inst_mmu(
     // 	.addr_i  (inst_sram_addr  ),
@@ -257,7 +280,7 @@ module mycpu_core(
         .rst                (rst        ),
         .flush              (flush      ),
         .stallreq           (stallreq_from_icache   ),
-        .cached             (1'b1     ),
+        .cached             (~inst_uncached     ),
         .sram_en            (inst_sram_en & ~i_refill & ~i_invalid    ),
         // .sram_addr          (inst_sram_addr_mmu),
         .sram_tag           (inst_tag          ),
@@ -283,17 +306,50 @@ module mycpu_core(
         .write_back    (1'b0    ),
         .hit           (icache_hit           ),
         .lru           (icache_lru           ),
-        .cached        (1'b1        ),
+        .cached        (~inst_uncached        ),
         .sram_en       (inst_sram_en & ~i_refill & ~i_invalid),
         .sram_wen      (inst_sram_wen      ),
         .sram_addr     (inst_sram_addr_mmu     ),
         .sram_wdata    (inst_sram_wdata    ),
-        .sram_rdata    (inst_sram_rdata    ),
+        .sram_rdata    (icache_temp_rdata    ),
         .refresh       (icache_refresh       ),
         .cacheline_new (icache_cacheline_new ),
         .cacheline_old (icache_cacheline_old )
     );
 
+    uncache_tag u_unicache_tag(
+    	.clk       (clk       ),
+        .rst       (rst       ),
+        .stallreq  (stallreq_from_unicache  ),
+        .cached    (~inst_uncached    ),
+        .sram_en   (inst_sram_en & ~i_refill & ~i_invalid & ~flush),
+        .sram_wen  (inst_sram_wen  ),
+        .sram_sel  (inst_sram_sel  ),
+        .sram_addr (inst_sram_addr_mmu ),
+        .refresh   (unicache_refresh   ),
+        .axi_en    (unicache_en    ),
+        .axi_wen   (unicache_wen   ),
+        .axi_sel   (unicache_sel   ),
+        .axi_addr  (unicache_addr  ),
+        .hit       (unicache_hit   )
+    );
+    
+    uncache_data u_unicache_data(
+    	.clk        (clk        ),
+        .rst        (rst        ),
+        .hit        (unicache_hit        ),
+        .cached     (~inst_uncached     ),
+        .refresh    (unicache_refresh    ),
+        .axi_rdata  (unicache_rdata  ),
+        .sram_rdata (unicache_temp_rdata )
+    );
+
+    reg inst_uncached_r;
+    always @ (posedge clk) begin
+        inst_uncached_r <= inst_uncached;
+    end
+    assign inst_sram_rdata = inst_uncached_r ? unicache_temp_rdata : icache_temp_rdata;
+    
     wire [31:0] data_sram_addr_mmu;
     wire [31:0] dcache_temp_rdata;
     wire [31:0] uncache_temp_rdata;
@@ -351,7 +407,7 @@ module mycpu_core(
         .rst       (rst       ),
         .stallreq  (stallreq_from_uncache  ),
         .cached    (~data_uncached    ),
-        .sram_en   (data_sram_en & ~d_refill & ~d_invalid & ~d_modify   ),
+        .sram_en   (data_sram_en & ~d_refill & ~d_invalid & ~d_modify & ~flush   ),
         .sram_wen  (data_sram_wen),
         .sram_sel  (data_sram_sel),
         .sram_addr (data_sram_addr_mmu ),
@@ -743,7 +799,7 @@ module mycpu_core(
         .stallreq_for_load(stallreq_for_load),
         .stallreq_from_icache   (stallreq_from_icache),
         .stallreq_from_dcache   (stallreq_from_dcache),
-        .stallreq_from_uncache  (stallreq_from_uncache),
+        .stallreq_from_uncache  (stallreq_from_uncache|stallreq_from_unicache),
         .excepttype_i     (mem_to_wb_bus[167:136]   ),
         .cp0_epc_i        (mem_to_wb_bus[232:201]   ),
         .current_pc       (mem_to_wb_bus[69:38]     ),
