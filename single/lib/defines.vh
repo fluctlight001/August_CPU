@@ -127,7 +127,7 @@
 `define ChipDisable 1'b0
 `define Cache 1'b1
 `define UnCache 1'b0
-`define StallBus 8:0
+`define StallBus 9:0
 
 //指令存储器inst_rom
 `define InstAddrBus 31:0
@@ -162,10 +162,12 @@
 `define DivStart 1'b1
 `define DivStop 1'b0
 
-`define PC_TO_IC_WD 65
+`define PC_TO_IT_WD 65
+`define IT_TO_IC_WD 65
 `define IC_TO_ID_WD 65
 `define ID_TO_EX_WD 242
-`define EX_TO_DT_WD 275
+`define EX_TO_DTLB_WD 275
+`define DTLB_TO_DT_WD 275
 `define DT_TO_DC_WD 275
 `define DC_TO_MEM_WD 275
 `define MEM_TO_WB_WD 274

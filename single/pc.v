@@ -14,7 +14,7 @@ module pc (
     // output reg [`InstAddrBus] pc,
     // output reg ce,
     // output wire [31:0] excepttype_o
-    output wire [`PC_TO_IC_WD-1:0] pc_to_ic_bus
+    output wire [`PC_TO_IT_WD-1:0] pc_to_ic_bus
 
 );
     reg [`InstAddrBus] pc;

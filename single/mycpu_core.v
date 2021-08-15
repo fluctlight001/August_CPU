@@ -58,7 +58,9 @@ module mycpu_core(
     wire [31:0] inst_sram_wdata;
     wire [31:0] inst_sram_rdata;
     wire inst_uncached;
+    wire it_inst_uncached;
     wire [19:0] inst_tag;
+    wire [19:0] it_inst_tag;
 
     wire data_sram_en;
     wire data_sram_wen;
@@ -67,7 +69,15 @@ module mycpu_core(
     wire [31:0] data_sram_wdata;
     wire [31:0] data_sram_rdata;
     wire data_uncached;
+    wire dt_data_uncached;
     wire [19:0] data_tag;
+    wire [19:0] dt_data_tag;
+
+    wire dtlb_data_sram_en;
+    wire dtlb_data_sram_wen;
+    wire [3:0] dtlb_data_sram_sel;
+    wire [31:0] dtlb_data_sram_addr;
+    wire [31:0] dtlb_data_sram_wdata;
 
     // icache tag
     wire icache_cached;
@@ -234,14 +244,14 @@ module mycpu_core(
         
         .r_index       (cp0_index[3:0]       ),
 
-        .inst_en       (inst_sram_en       ),
-        .inst_vaddr    (inst_sram_addr     ),
+        .inst_en       (pc_to_it_bus[32]       ),
+        .inst_vaddr    (pc_to_it_bus[31:0]     ),
         // .inst_uncached (inst_uncached ),    //  1 - uncached | 0 - cached
         .inst_tag      (inst_tag      ),
 
-        .data_ren      (data_sram_en&~data_sram_wen),
-        .data_wen      (data_sram_en& data_sram_wen),
-        .data_vaddr    (data_sram_addr    ),
+        .data_ren      (dtlb_data_sram_en &~dtlb_data_sram_wen),
+        .data_wen      (dtlb_data_sram_en & dtlb_data_sram_wen),
+        .data_vaddr    (dtlb_data_sram_addr    ),
         .data_uncached (data_uncached ),
         .data_tag      (data_tag      ),
 
@@ -268,7 +278,7 @@ module mycpu_core(
     wire [31:0] inst_sram_addr_mmu;
     wire [31:0] icache_temp_rdata;
     wire [31:0] unicache_temp_rdata;
-    assign inst_sram_addr_mmu = {inst_tag,inst_sram_addr[11:0]};
+    assign inst_sram_addr_mmu = {it_inst_tag,inst_sram_addr[11:0]};
     // mmu u_inst_mmu(
     // 	.addr_i  (inst_sram_addr  ),
     //     .addr_o  (inst_sram_addr_mmu  ),
@@ -280,10 +290,10 @@ module mycpu_core(
         .rst                (rst        ),
         .flush              (flush      ),
         .stallreq           (stallreq_from_icache   ),
-        .cached             (~inst_uncached     ),
-        .sram_en            (inst_sram_en & ~i_refill & ~i_invalid    ),
+        .cached             (~it_inst_uncached     ),
+        .sram_en            (inst_sram_en   ),
         // .sram_addr          (inst_sram_addr_mmu),
-        .sram_tag           (inst_tag          ),
+        .sram_tag           (it_inst_tag          ),
         .sram_index         (inst_sram_addr[11:6]),
         .refresh            (icache_refresh    ),
         .miss               (icache_miss       ),
@@ -306,8 +316,8 @@ module mycpu_core(
         .write_back    (1'b0    ),
         .hit           (icache_hit           ),
         .lru           (icache_lru           ),
-        .cached        (~inst_uncached        ),
-        .sram_en       (inst_sram_en & ~i_refill & ~i_invalid),
+        .cached        (~it_inst_uncached        ),
+        .sram_en       (inst_sram_en ),
         .sram_wen      (inst_sram_wen      ),
         .sram_addr     (inst_sram_addr_mmu     ),
         .sram_wdata    (inst_sram_wdata    ),
@@ -321,8 +331,8 @@ module mycpu_core(
     	.clk       (clk       ),
         .rst       (rst       ),
         .stallreq  (stallreq_from_unicache  ),
-        .cached    (~inst_uncached    ),
-        .sram_en   (inst_sram_en & ~i_refill & ~i_invalid & ~flush),
+        .cached    (~it_inst_uncached    ),
+        .sram_en   (inst_sram_en & ~flush),
         .sram_wen  (inst_sram_wen  ),
         .sram_sel  (inst_sram_sel  ),
         .sram_addr (inst_sram_addr_mmu ),
@@ -338,7 +348,7 @@ module mycpu_core(
     	.clk        (clk        ),
         .rst        (rst        ),
         .hit        (unicache_hit        ),
-        .cached     (~inst_uncached     ),
+        .cached     (~it_inst_uncached     ),
         .refresh    (unicache_refresh    ),
         .axi_rdata  (unicache_rdata  ),
         .sram_rdata (unicache_temp_rdata )
@@ -346,14 +356,14 @@ module mycpu_core(
 
     reg inst_uncached_r;
     always @ (posedge clk) begin
-        inst_uncached_r <= inst_uncached;
+        inst_uncached_r <= it_inst_uncached;
     end
     assign inst_sram_rdata = inst_uncached_r ? unicache_temp_rdata : icache_temp_rdata;
     
     wire [31:0] data_sram_addr_mmu;
     wire [31:0] dcache_temp_rdata;
     wire [31:0] uncache_temp_rdata;
-    assign data_sram_addr_mmu = {data_tag,data_sram_addr[11:0]};
+    assign data_sram_addr_mmu = {dt_data_tag,data_sram_addr[11:0]};
     // mmu u_data_mmu(
     // 	.addr_i  (data_sram_addr  ),
     //     .addr_o  (data_sram_addr_mmu  ),
@@ -365,10 +375,10 @@ module mycpu_core(
         .rst                (rst        ),
         .flush              (flush      ),
         .stallreq           (stallreq_from_dcache   ),
-        .cached             (~data_uncached     ),
-        .sram_en            (data_sram_en & ~d_refill & ~d_invalid & ~d_modify ),
+        .cached             (~dt_data_uncached     ),
+        .sram_en            (data_sram_en),
         // .sram_addr          (data_sram_addr_mmu  ),
-        .sram_tag           (data_tag         ),
+        .sram_tag           (dt_data_tag         ),
         .sram_index         (data_sram_addr[11:6]),
         .refresh            (dcache_refresh   ),
         .miss               (dcache_miss      ),
@@ -391,8 +401,8 @@ module mycpu_core(
         .write_back    (dcache_write_back    ),
         .hit           (dcache_hit           ),
         .lru           (dcache_lru           ),
-        .cached        (~data_uncached        ),
-        .sram_en       (data_sram_en & ~d_refill & ~d_invalid & ~d_modify       ),
+        .cached        (~dt_data_uncached        ),
+        .sram_en       (data_sram_en),
         .sram_wen      ({4{data_sram_wen}}&data_sram_sel),
         .sram_addr     (data_sram_addr_mmu     ),
         .sram_wdata    (data_sram_wdata    ),
@@ -406,8 +416,8 @@ module mycpu_core(
     	.clk       (clk       ),
         .rst       (rst       ),
         .stallreq  (stallreq_from_uncache  ),
-        .cached    (~data_uncached    ),
-        .sram_en   (data_sram_en & ~d_refill & ~d_invalid & ~d_modify & ~flush   ),
+        .cached    (~dt_data_uncached    ),
+        .sram_en   (data_sram_en & ~flush   ),
         .sram_wen  (data_sram_wen),
         .sram_sel  (data_sram_sel),
         .sram_addr (data_sram_addr_mmu ),
@@ -423,7 +433,7 @@ module mycpu_core(
     	.clk        (clk        ),
         .rst        (rst        ),
         .hit        (uncache_hit        ),
-        .cached     (~data_uncached     ),
+        .cached     (~dt_data_uncached     ),
         .refresh    (uncache_refresh    ),
         .axi_rdata  (uncache_rdata  ),
         .sram_rdata (uncache_temp_rdata )
@@ -431,26 +441,29 @@ module mycpu_core(
     
     reg data_uncached_r;
     always @ (posedge clk) begin
-        data_uncached_r <= data_uncached;
+        data_uncached_r <= dt_data_uncached;
     end
     assign data_sram_rdata = data_uncached_r ? uncache_temp_rdata : dcache_temp_rdata;
 
-    wire [`PC_TO_IC_WD-1:0] pc_to_ic_bus;
+    wire [`PC_TO_IT_WD-1:0] pc_to_it_bus;
+    wire [`IT_TO_IC_WD-1:0] it_to_ic_bus;
     wire [`IC_TO_ID_WD-1:0] ic_to_id_bus;
     wire [`ID_TO_EX_WD-1:0] id_to_ex_bus;
-    wire [`EX_TO_DT_WD-1:0] ex_to_dt_bus;
+    wire [`EX_TO_DTLB_WD-1:0] ex_to_dtlb_bus;
+    wire [`DTLB_TO_DT_WD-1:0] dtlb_to_dt_bus;
     wire [`DT_TO_DC_WD-1:0] dt_to_dc_bus;
     wire [`DC_TO_MEM_WD-1:0] dc_to_mem_bus;
     wire [`MEM_TO_WB_WD-1:0] mem_to_wb_bus;
     wire [`BR_WD-1:0] br_bus; 
-    wire [`DATA_SRAM_WD-1:0] ex_dt_sram_bus;
+    wire [`DATA_SRAM_WD-1:0] ex_to_dtlb_sram_bus, dtlb_to_dt_sram_bus;
 
     
 
 
-    assign inst_sram_en     = pc_to_ic_bus[32];
-    assign inst_sram_wen    = 4'b0;
-    assign inst_sram_addr   = pc_to_ic_bus[31:0];
+    assign inst_sram_en     = it_to_ic_bus[32];
+    assign inst_sram_wen    = 1'b0;
+    assign inst_sram_sel    = 4'b0;
+    assign inst_sram_addr   = it_to_ic_bus[31:0];
     assign inst_sram_wdata  = 32'b0;
     // assign {
     //     inst_sram_en,
@@ -523,8 +536,25 @@ module mycpu_core(
         .new_pc       (new_pc       ),
         .br_bus       ({branch_e,branch_target_addr}       ),
         .bp_bus       ({bp_e,bp_target}),
-        .pc_to_ic_bus (pc_to_ic_bus )
+        .pc_to_ic_bus (pc_to_it_bus )
     );
+
+    it u_it(
+    	.clk             (clk             ),
+        .rst             (rst             ),
+        .stall           (stall           ),
+        .flush           (flush           ),
+        .br_e            (branch_e            ),
+        .i_refill        (i_refill        ),
+        .i_invalid       (i_invalid       ),
+        .inst_uncached   (inst_uncached   ),
+        .inst_tag        (inst_tag        ),
+        .inst_uncached_o (it_inst_uncached ),
+        .inst_tag_o      (it_inst_tag      ),
+        .pc_to_it_bus    (pc_to_it_bus    ),
+        .it_to_ic_bus    (it_to_ic_bus    )
+    );
+    
     
     
     ic u_ic(
@@ -533,9 +563,7 @@ module mycpu_core(
         .stall        (stall        ),
         .flush        (flush        ),
         .br_e         (branch_e     ),
-        .i_refill     (i_refill     ),
-        .i_invalid    (i_invalid    ),
-        .pc_to_ic_bus (pc_to_ic_bus ),
+        .it_to_ic_bus (it_to_ic_bus ),
         .ic_to_id_bus (ic_to_id_bus )
     );
 
@@ -545,7 +573,7 @@ module mycpu_core(
         .rst          (rst          ),
         .stall        (stall        ),
         .flush        (flush        ),
-        .if_pc        (pc_to_ic_bus[31:0]        ),
+        .if_pc        (pc_to_it_bus[31:0]        ),
         .br_bus       (br_bus       ),
         .bp_bus       (bp_bus       ),
         .bp_to_ex_bus (bp_to_ex_bus )
@@ -595,7 +623,7 @@ module mycpu_core(
         .stall           (stall           ),
         .stallreq_for_ex (stallreq_for_ex ),
         .id_to_ex_bus    (id_to_ex_bus    ),
-        .ex_to_dt_bus    (ex_to_dt_bus    ),
+        .ex_to_dt_bus    (ex_to_dtlb_bus    ),
         .sel_rs_forward  (sel_rs_forward  ),
         .rs_forward_data (rs_forward_data ),
         .sel_rt_forward  (sel_rt_forward  ),
@@ -607,33 +635,57 @@ module mycpu_core(
         .cp0_reg_rsel     (cp0_reg_rsel     ),
         .cp0_reg_data_i  (cp0_reg_rdata   ),
         // .is_in_delayslot_i(br_bus[32]     ),
-        .ex_dt_sram_bus  (ex_dt_sram_bus  ),
+        .ex_dt_sram_bus  (ex_to_dtlb_sram_bus  ),
         .bp_to_ex_bus    (bp_to_ex_bus    )
     );
 
-    dt u_dt(
-    	.clk             (clk             ),
-        .rst             (rst             ),
-        .flush           (flush           ),
-        .stall           (stall           ),
-        .ex_to_dt_bus    (ex_to_dt_bus    ),
-        .ex_dt_sram_bus  (ex_dt_sram_bus  ),
-        .dt_to_dc_bus    (dt_to_dc_bus    ),
-        .data_sram_en    (data_sram_en    ),
-        .data_sram_wen   (data_sram_wen   ),
-        .data_sram_sel   (data_sram_sel   ),
-        .data_sram_addr  (data_sram_addr  ),
-        .data_sram_wdata (data_sram_wdata )
+    dtlb u_dtlb(
+    	.clk                  (clk                  ),
+        .rst                  (rst                  ),
+        .flush                (flush                ),
+        .stall                (stall                ),
+        .ex_to_dtlb_bus       (ex_to_dtlb_bus       ),
+        .ex_to_dtlb_sram_bus  (ex_to_dtlb_sram_bus  ),
+        .dtlb_to_dt_bus       (dtlb_to_dt_bus       ),
+        .dtlb_to_dt_sram_bus  (dtlb_to_dt_sram_bus  ),
+        .dtlb_data_sram_en    (dtlb_data_sram_en    ),
+        .dtlb_data_sram_wen   (dtlb_data_sram_wen   ),
+        .dtlb_data_sram_sel   (dtlb_data_sram_sel   ),
+        .dtlb_data_sram_addr  (dtlb_data_sram_addr  ),
+        .dtlb_data_sram_wdata (dtlb_data_sram_wdata )
+        // .d_index_wb_invalid   (d_index_wb_invalid   ),
+        // .d_index_store_tag    (d_index_store_tag    ),
+        // .d_hit_invalid        (d_hit_invalid        ),
+        // .d_hit_wb_invalid     (d_hit_wb_invalid     )
     );
-    
+
+    dt u_dt(
+    	.clk                 (clk                 ),
+        .rst                 (rst                 ),
+        .flush               (flush               ),
+        .stall               (stall               ),
+        .d_refill            (d_refill            ),
+        .d_invalid           (d_invalid           ),
+        .d_modify            (d_modify            ),
+        .data_uncached       (data_uncached       ),
+        .data_tag            (data_tag            ),
+        .data_uncached_o     (dt_data_uncached     ),
+        .data_tag_o          (dt_data_tag          ),
+        .dtlb_to_dt_bus      (dtlb_to_dt_bus      ),
+        .dtlb_to_dt_sram_bus (dtlb_to_dt_sram_bus ),
+        .dt_to_dc_bus        (dt_to_dc_bus        ),
+        .data_sram_en        (data_sram_en        ),
+        .data_sram_wen       (data_sram_wen       ),
+        .data_sram_sel       (data_sram_sel       ),
+        .data_sram_addr      (data_sram_addr      ),
+        .data_sram_wdata     (data_sram_wdata     )
+    );
+
     dc u_dc(
     	.clk           (clk           ),
         .rst           (rst           ),
         .flush         (flush         ),
         .stall         (stall         ),
-        .d_refill      (d_refill      ),
-        .d_invalid     (d_invalid     ),
-        .d_modify      (d_modify      ),
         .dt_to_dc_bus  (dt_to_dc_bus  ),
         .dc_to_mem_bus (dc_to_mem_bus )
     );
@@ -696,10 +748,14 @@ module mycpu_core(
 
     	.rs_rf_raddr       (rs_rf_raddr           ),
         .rt_rf_raddr       (rt_rf_raddr           ),
-        .ex_we             (ex_to_dt_bus[37]      ),
-        .ex_waddr          (ex_to_dt_bus[36:32]   ),
-        .ex_wdata          (ex_to_dt_bus[31:0]    ),
-        .ex_ram_ctrl       ({ex_to_dt_bus[43:39],ex_to_dt_bus[267:266]}   ),
+        .ex_we             (ex_to_dtlb_bus[37]      ),
+        .ex_waddr          (ex_to_dtlb_bus[36:32]   ),
+        .ex_wdata          (ex_to_dtlb_bus[31:0]    ),
+        .ex_ram_ctrl       ({ex_to_dtlb_bus[43:39],ex_to_dtlb_bus[267:266]}   ),
+        .dtlb_we           (dtlb_to_dt_bus[37]),
+        .dtlb_waddr        (dtlb_to_dt_bus[36:32]),
+        .dtlb_wdata        (dtlb_to_dt_bus[31:0]),
+        .dtlb_ram_ctrl     ({dtlb_to_dt_bus[43:39],dtlb_to_dt_bus[267:266]}),
         .dt_we             (dt_to_dc_bus[37]      ),
         .dt_waddr          (dt_to_dc_bus[36:32]   ),
         .dt_wdata          (dt_to_dc_bus[31:0]    ),
@@ -711,7 +767,7 @@ module mycpu_core(
         .dc_mem_op         ({dc_to_mem_bus[269:268],dc_to_mem_bus[146:142]}),
         .data_sram_rdata   (data_sram_rdata       ),
         .dc_rt_rf_raddr    (bypass_raddr          ),
-        .dc_rt_rf_rdata       (bypass_rdata          ),
+        .dc_rt_rf_rdata    (bypass_rdata          ),
         .mem_we            (mem_to_wb_bus[37]     ),
         .mem_waddr         (mem_to_wb_bus[36:32]  ),
         .mem_wdata         (mem_to_wb_bus[31:0]   ),
@@ -725,10 +781,14 @@ module mycpu_core(
     	.clk       (clk       ),
         .rst       (rst       ),
         .stall     (stall     ),
-        .ex_hi_we  (ex_to_dt_bus[141]  ),
-        .ex_lo_we  (ex_to_dt_bus[140]  ),
-        .ex_hi_i   (ex_to_dt_bus[139:108]   ),
-        .ex_lo_i   (ex_to_dt_bus[107:76]   ),
+        .ex_hi_we  (ex_to_dtlb_bus[141]  ),
+        .ex_lo_we  (ex_to_dtlb_bus[140]  ),
+        .ex_hi_i   (ex_to_dtlb_bus[139:108]   ),
+        .ex_lo_i   (ex_to_dtlb_bus[107:76]   ),
+        .dtlb_hi_we(dtlb_to_dt_bus[141]),
+        .dtlb_lo_we(dtlb_to_dt_bus[140]),
+        .dtlb_hi_i (dtlb_to_dt_bus[139:108]),
+        .dtlb_lo_i (dtlb_to_dt_bus[107:76]),
         .dt_hi_we  (dt_to_dc_bus[141]  ),
         .dt_lo_we  (dt_to_dc_bus[140]  ),
         .dt_hi_i   (dt_to_dc_bus[139:108]   ),
@@ -779,7 +839,8 @@ module mycpu_core(
         .bad_vaddr_i       (mem_to_wb_bus[199:168]       ),
         .is_in_delayslot_i (mem_to_wb_bus[200]           ),
 
-        .ex_cp0_bus        (ex_to_dt_bus[252:212]        ),
+        .ex_cp0_bus        (ex_to_dtlb_bus[252:212]      ),
+        .dtlb_cp0_bus      (dtlb_to_dt_bus[252:212]      ),
         .dt_cp0_bus        (dt_to_dc_bus[252:212]        ),
         .dc_cp0_bus        (dc_to_mem_bus[252:212]       ),
         .mem_cp0_bus       (mem_to_wb_bus[273:233]       ),

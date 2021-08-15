@@ -43,6 +43,7 @@ module cp0_reg(
     input wire is_in_delayslot_i,
 
     input wire [40:0] ex_cp0_bus,
+    input wire [40:0] dtlb_cp0_bus,
     input wire [40:0] dt_cp0_bus,
     input wire [40:0] dc_cp0_bus,
     input wire [40:0] mem_cp0_bus,
@@ -98,7 +99,7 @@ module cp0_reg(
             taghi_o <= 32'b0;
             timer_int_o <= 32'b0;
         end
-        else if (stall[6]&stall[7])begin
+        else if (stall[7]&stall[8])begin
             
         end
         else begin
@@ -455,34 +456,40 @@ module cp0_reg(
 
 // bypass
     wire [31:0] cp0_data_temp;
-    wire ex_ok, dt_ok, dc_ok, mem_ok, wb_ok;
-    reg [40:0] ex_buffer, dt_buffer, dc_buffer, mem_buffer;
+    wire ex_ok, dtlb_ok, dt_ok, dc_ok, mem_ok, wb_ok;
+    reg [40:0] ex_buffer, dtlb_buffer, dt_buffer, dc_buffer, mem_buffer;
 
     always @ (posedge clk ) begin
         if (rst) begin
-            {ex_buffer,dt_buffer,dc_buffer,mem_buffer} <= {41'b0,41'b0,41'b0,41'b0};
+            {ex_buffer,dtlb_buffer,dt_buffer,dc_buffer,mem_buffer} <= {41'b0,41'b0,41'b0,41'b0,41'b0};
         end
         else if(stall[3] == `Stop && stall[4] == `NoStop) begin
-            {ex_buffer,dt_buffer,dc_buffer,mem_buffer} <= {41'b0,41'b0,41'b0,41'b0};
+            {ex_buffer,dtlb_buffer,dt_buffer,dc_buffer,mem_buffer} <= {41'b0,41'b0,41'b0,41'b0,41'b0};
         end
         else if (stall[3] == `NoStop) begin
-            {ex_buffer,dt_buffer,dc_buffer,mem_buffer} <= {ex_cp0_bus,dt_cp0_bus,dc_cp0_bus,mem_cp0_bus};
+            {ex_buffer,dtlb_buffer,dt_buffer,dc_buffer,mem_buffer}<= {ex_cp0_bus,dtlb_cp0_bus,dt_cp0_bus,dc_cp0_bus,mem_cp0_bus};
         end
     end
 
     assign ex_ok = ex_buffer[40] & (raddr_i==ex_buffer[39:35] & rsel_i == ex_buffer[34:32]);
+    assign dtlb_ok = dtlb_buffer[40] & (raddr_i==dtlb_buffer[39:35] &rsel_i == dtlb_buffer[34:32]);
     assign dt_ok = dt_buffer[40] & (raddr_i==dt_buffer[39:35] & rsel_i == dt_buffer[34:32]);
     assign dc_ok = dc_buffer[40] & (raddr_i==dc_buffer[39:35] & rsel_i == dc_buffer[34:32]);
     assign mem_ok = mem_buffer[40] & (raddr_i==mem_buffer[39:35] & rsel_i == mem_buffer[34:32]);
     // assign wb_ok = wb_cp0_bus[37] & (raddr_i==wb_cp0_bus[36:32]);
 
-    wire [31:0] ex_wdata,dt_wdata,dc_wdata,mem_wdata;
+    wire [31:0] ex_wdata,dtlb_wdata,dt_wdata,dc_wdata,mem_wdata;
 
     assign ex_wdata = raddr_i == `CP0_REG_INDEX ? {28'b0,ex_buffer[3:0]} 
                     : raddr_i == `CP0_REG_ENTRYLO0 ? {6'b0,ex_buffer[25:0]}
                     : raddr_i == `CP0_REG_ENTRYLO1 ? {6'b0,ex_buffer[25:0]}
                     : raddr_i == `CP0_REG_ENTRYHI ? {ex_buffer[31:13],5'b0,ex_buffer[7:0]}
                     : ex_buffer[31:0];
+    assign dtlb_wdata = raddr_i == `CP0_REG_INDEX ? {28'b0,dtlb_buffer[3:0]}
+                      : raddr_i == `CP0_REG_ENTRYLO0 ? {6'b0,dtlb_buffer[25:0]}
+                      : raddr_i == `CP0_REG_ENTRYLO1 ? {6'b0,dtlb_buffer[25:0]}
+                      : raddr_i == `CP0_REG_ENTRYHI ? {dtlb_buffer[31:13],5'b0,dtlb_buffer[7:0]}
+                      : dtlb_buffer[31:0];
     assign dt_wdata = raddr_i == `CP0_REG_INDEX ? {28'b0,dt_buffer[3:0]} 
                     : raddr_i == `CP0_REG_ENTRYLO0 ? {6'b0,dt_buffer[25:0]}
                     : raddr_i == `CP0_REG_ENTRYLO1 ? {6'b0,dt_buffer[25:0]}
@@ -500,6 +507,7 @@ module cp0_reg(
                     : mem_buffer[31:0];
 
     assign cp0_data_temp = ex_ok ? ex_wdata
+                         : dtlb_ok ? dtlb_wdata
                          : dt_ok ? dt_wdata
                          : dc_ok ? dc_wdata
                          : mem_ok ? mem_wdata

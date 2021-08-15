@@ -8,7 +8,7 @@ module ex (
 
     input wire [`ID_TO_EX_WD-1:0] id_to_ex_bus,
     
-    output wire [`EX_TO_DT_WD-1:0] ex_to_dt_bus,
+    output wire [`EX_TO_DTLB_WD-1:0] ex_to_dt_bus,
 
 
     // input wire [31:0] pc, inst,
@@ -398,7 +398,7 @@ module ex (
                      : nojump_err ? pc_plus_8 : 32'b0;
 
     assign br_bus = {
-        branch_e,   // 32
+        branch_e&~stall[4],   // 32
         br_target   // 31:0
     };
 

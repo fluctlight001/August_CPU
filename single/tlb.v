@@ -211,6 +211,7 @@ wire i_v0;
 wire [19:0]i_pfn1;
 wire [2:0]i_c1;
 wire i_d1;
+wire i_v1;
 
 assign i_index = match0[0] ? 4'd0
                 : match0[1] ? 4'd1
@@ -230,149 +231,28 @@ assign i_index = match0[0] ? 4'd0
                 : match0[15] ? 4'd15
                 : 4'd0;
 
-assign i_pfn0 =   ({20{match0[0]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[1]}} & tlb_pfn0[i_index])
-                 | ({20{match0[2]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[3]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[4]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[5]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[6]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[7]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[8]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[9]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[10]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[11]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[12]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[13]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[14]}} & tlb_pfn0[i_index]) 
-                 | ({20{match0[15]}} & tlb_pfn0[i_index]);
+assign i_pfn0 = tlb_pfn0[i_index]; 
                  
-assign i_pfn1 =   ({20{match0[0]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[1]}} & tlb_pfn1[i_index])
-                 | ({20{match0[2]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[3]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[4]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[5]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[6]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[7]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[8]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[9]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[10]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[11]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[12]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[13]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[14]}} & tlb_pfn1[i_index]) 
-                 | ({20{match0[15]}} & tlb_pfn1[i_index]);
+assign i_pfn1 = tlb_pfn1[i_index];
 
-assign i_c0   =   ({3{match0[0]}} & tlb_c0[i_index]) 
-                | ({3{match0[1]}} & tlb_c0[i_index]) 
-                | ({3{match0[2]}} & tlb_c0[i_index]) 
-                | ({3{match0[3]}} & tlb_c0[i_index]) 
-                | ({3{match0[4]}} & tlb_c0[i_index]) 
-                | ({3{match0[5]}} & tlb_c0[i_index]) 
-                | ({3{match0[6]}} & tlb_c0[i_index]) 
-                | ({3{match0[7]}} & tlb_c0[i_index]) 
-                | ({3{match0[8]}} & tlb_c0[i_index]) 
-                | ({3{match0[9]}} & tlb_c0[i_index]) 
-                | ({3{match0[10]}} & tlb_c0[i_index]) 
-                | ({3{match0[11]}} & tlb_c0[i_index]) 
-                | ({3{match0[12]}} & tlb_c0[i_index]) 
-                | ({3{match0[13]}} & tlb_c0[i_index]) 
-                | ({3{match0[14]}} & tlb_c0[i_index]) 
-                | ({3{match0[15]}} & tlb_c0[i_index]);
+assign i_c0   = tlb_c0[i_index];
 
-
-assign i_c1   =   ({3{match0[0]}} & tlb_c1[i_index]) 
-                | ({3{match0[1]}} & tlb_c1[i_index]) 
-                | ({3{match0[2]}} & tlb_c1[i_index]) 
-                | ({3{match0[3]}} & tlb_c1[i_index]) 
-                | ({3{match0[4]}} & tlb_c1[i_index]) 
-                | ({3{match0[5]}} & tlb_c1[i_index]) 
-                | ({3{match0[6]}} & tlb_c1[i_index]) 
-                | ({3{match0[7]}} & tlb_c1[i_index]) 
-                | ({3{match0[8]}} & tlb_c1[i_index]) 
-                | ({3{match0[9]}} & tlb_c1[i_index]) 
-                | ({3{match0[10]}} & tlb_c1[i_index]) 
-                | ({3{match0[11]}} & tlb_c1[i_index]) 
-                | ({3{match0[12]}} & tlb_c1[i_index]) 
-                | ({3{match0[13]}} & tlb_c1[i_index]) 
-                | ({3{match0[14]}} & tlb_c1[i_index]) 
-                | ({3{match0[15]}} & tlb_c1[i_index]);
+assign i_c1   = tlb_c1[i_index];
                 
+assign i_d0   = tlb_d0[i_index];
 
-assign i_d0   =   (match0[0] & tlb_d0[i_index]) 
-                | (match0[1] & tlb_d0[i_index]) 
-                | (match0[2] & tlb_d0[i_index]) 
-                | (match0[3] & tlb_d0[i_index]) 
-                | (match0[4] & tlb_d0[i_index]) 
-                | (match0[5] & tlb_d0[i_index]) 
-                | (match0[6] & tlb_d0[i_index]) 
-                | (match0[7] & tlb_d0[i_index]) 
-                | (match0[8] & tlb_d0[i_index]) 
-                | (match0[9] & tlb_d0[i_index]) 
-                | (match0[10] & tlb_d0[i_index]) 
-                | (match0[11] & tlb_d0[i_index]) 
-                | (match0[12] & tlb_d0[i_index]) 
-                | (match0[13] & tlb_d0[i_index]) 
-                | (match0[14] & tlb_d0[i_index]) 
-                | (match0[15] & tlb_d0[i_index]);
+assign i_d1   = tlb_d1[i_index];
 
-assign i_d1   =   (match0[0] & tlb_d1[i_index]) 
-                | (match0[1] & tlb_d1[i_index]) 
-                | (match0[2] & tlb_d1[i_index]) 
-                | (match0[3] & tlb_d1[i_index]) 
-                | (match0[4] & tlb_d1[i_index]) 
-                | (match0[5] & tlb_d1[i_index]) 
-                | (match0[6] & tlb_d1[i_index]) 
-                | (match0[7] & tlb_d1[i_index]) 
-                | (match0[8] & tlb_d1[i_index]) 
-                | (match0[9] & tlb_d1[i_index]) 
-                | (match0[10] & tlb_d1[i_index]) 
-                | (match0[11] & tlb_d1[i_index]) 
-                | (match0[12] & tlb_d1[i_index]) 
-                | (match0[13] & tlb_d1[i_index]) 
-                | (match0[14] & tlb_d1[i_index]) 
-                | (match0[15] & tlb_d1[i_index]);
+assign i_v0   = tlb_v0[i_index];
 
+assign i_v1   = tlb_v1[i_index];
 
-assign i_v0   =   (match0[0] & tlb_v0[i_index]) 
-                | (match0[1] & tlb_v0[i_index]) 
-                | (match0[2] & tlb_v0[i_index]) 
-                | (match0[3] & tlb_v0[i_index]) 
-                | (match0[4] & tlb_v0[i_index]) 
-                | (match0[5] & tlb_v0[i_index]) 
-                | (match0[6] & tlb_v0[i_index]) 
-                | (match0[7] & tlb_v0[i_index]) 
-                | (match0[8] & tlb_v0[i_index]) 
-                | (match0[9] & tlb_v0[i_index]) 
-                | (match0[10] & tlb_v0[i_index]) 
-                | (match0[11] & tlb_v0[i_index]) 
-                | (match0[12] & tlb_v0[i_index]) 
-                | (match0[13] & tlb_v0[i_index]) 
-                | (match0[14] & tlb_v0[i_index]) 
-                | (match0[15] & tlb_v0[i_index]);
+// assign  i_pfn = i_odd_page ? i_pfn1 : i_pfn0;
+// assign  i_c   = i_odd_page ? i_c1   : i_c0;
+// assign  i_d   = i_odd_page ? i_d1   : i_d0;
+// assign  i_v   = i_odd_page ? i_v1   : i_v0;
 
-assign i_v1   =   (match0[0] & tlb_v1[i_index]) 
-                | (match0[1] & tlb_v1[i_index]) 
-                | (match0[2] & tlb_v1[i_index]) 
-                | (match0[3] & tlb_v1[i_index]) 
-                | (match0[4] & tlb_v1[i_index]) 
-                | (match0[5] & tlb_v1[i_index]) 
-                | (match0[6] & tlb_v1[i_index]) 
-                | (match0[7] & tlb_v1[i_index]) 
-                | (match0[8] & tlb_v1[i_index]) 
-                | (match0[9] & tlb_v1[i_index]) 
-                | (match0[10] & tlb_v1[i_index]) 
-                | (match0[11] & tlb_v1[i_index]) 
-                | (match0[12] & tlb_v1[i_index]) 
-                | (match0[13] & tlb_v1[i_index]) 
-                | (match0[14] & tlb_v1[i_index]) 
-                | (match0[15] & tlb_v1[i_index]);
-
-assign  i_pfn = i_odd_page ? i_pfn1 : i_pfn0;
-assign  i_c   = i_odd_page ? i_c1   : i_c0;
-assign  i_d   = i_odd_page ? i_d1   : i_d0;
-assign  i_v   = i_odd_page ? i_v1   : i_v0;
+assign {i_pfn,i_c,i_d,i_v} = i_odd_page ? {i_pfn1,i_c1,i_d1,i_v1} : {i_pfn0,i_c0,i_d0,i_v0};
 
 
 //search data
@@ -408,40 +288,7 @@ wire d_v0;
 wire [19:0]d_pfn1;
 wire [2:0]d_c1;
 wire d_d1;
-
-assign d_pfn0 =   ({20{match1[0]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[1]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[2]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[3]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[4]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[5]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[6]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[7]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[8]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[9]}} & tlb_pfn0[d_index])
-                | ({20{match1[10]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[11]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[12]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[13]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[14]}} & tlb_pfn0[d_index]) 
-                | ({20{match1[15]}} & tlb_pfn0[d_index]);
-
-assign d_pfn1 =   ({20{match1[0]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[1]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[2]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[3]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[4]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[5]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[6]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[7]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[8]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[9]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[10]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[11]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[12]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[13]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[14]}} & tlb_pfn1[d_index]) 
-                | ({20{match1[15]}} & tlb_pfn1[d_index]);
+wire d_v1;
 
 assign d_index = match1[0] ? 4'd0
                 : match1[1] ? 4'd1
@@ -460,115 +307,30 @@ assign d_index = match1[0] ? 4'd0
                 : match1[14] ? 4'd14
                 : match1[15] ? 4'd15
                 : 4'd0;  
-                               
 
-assign d_c1   =   ({3{match1[0]}} & tlb_c1[d_index]) 
-                | ({3{match1[1]}} & tlb_c1[d_index]) 
-                | ({3{match1[2]}} & tlb_c1[d_index]) 
-                | ({3{match1[3]}} & tlb_c1[d_index]) 
-                | ({3{match1[4]}} & tlb_c1[d_index]) 
-                | ({3{match1[5]}} & tlb_c1[d_index]) 
-                | ({3{match1[6]}} & tlb_c1[d_index]) 
-                | ({3{match1[7]}} & tlb_c1[d_index]) 
-                | ({3{match1[8]}} & tlb_c1[d_index]) 
-                | ({3{match1[9]}} & tlb_c1[d_index]) 
-                | ({3{match1[10]}} & tlb_c1[d_index]) 
-                | ({3{match1[11]}} & tlb_c1[d_index]) 
-                | ({3{match1[12]}} & tlb_c1[d_index]) 
-                | ({3{match1[13]}} & tlb_c1[d_index]) 
-                | ({3{match1[14]}} & tlb_c1[d_index]) 
-                | ({3{match1[15]}} & tlb_c1[d_index]);
+assign d_pfn0 = tlb_pfn0[d_index];
 
-assign d_c0   =   ({3{match1[0]}} & tlb_c0[d_index]) 
-                | ({3{match1[1]}} & tlb_c0[d_index]) 
-                | ({3{match1[2]}} & tlb_c0[d_index]) 
-                | ({3{match1[3]}} & tlb_c0[d_index]) 
-                | ({3{match1[4]}} & tlb_c0[d_index]) 
-                | ({3{match1[5]}} & tlb_c0[d_index]) 
-                | ({3{match1[6]}} & tlb_c0[d_index]) 
-                | ({3{match1[7]}} & tlb_c0[d_index]) 
-                | ({3{match1[8]}} & tlb_c0[d_index]) 
-                | ({3{match1[9]}} & tlb_c0[d_index]) 
-                | ({3{match1[10]}} & tlb_c0[d_index]) 
-                | ({3{match1[11]}} & tlb_c0[d_index]) 
-                | ({3{match1[12]}} & tlb_c0[d_index]) 
-                | ({3{match1[13]}} & tlb_c0[d_index]) 
-                | ({3{match1[14]}} & tlb_c0[d_index]) 
-                | ({3{match1[15]}} & tlb_c0[d_index]);
+assign d_pfn1 = tlb_pfn1[d_index];
 
-assign d_d1   =   (match1[0] & tlb_d1[d_index]) 
-                | (match1[1] & tlb_d1[d_index]) 
-                | (match1[2] & tlb_d1[d_index]) 
-                | (match1[3] & tlb_d1[d_index]) 
-                | (match1[4] & tlb_d1[d_index]) 
-                | (match1[5] & tlb_d1[d_index]) 
-                | (match1[6] & tlb_d1[d_index]) 
-                | (match1[7] & tlb_d1[d_index]) 
-                | (match1[8] & tlb_d1[d_index]) 
-                | (match1[9] & tlb_d1[d_index]) 
-                | (match1[10] & tlb_d1[d_index]) 
-                | (match1[11] & tlb_d1[d_index]) 
-                | (match1[12] & tlb_d1[d_index]) 
-                | (match1[13] & tlb_d1[d_index]) 
-                | (match1[14] & tlb_d1[d_index]) 
-                | (match1[15] & tlb_d1[d_index]);
+assign d_c1   = tlb_c1[d_index];
 
-assign d_d0   =   (match1[0] & tlb_d0[d_index]) 
-                | (match1[1] & tlb_d0[d_index]) 
-                | (match1[2] & tlb_d0[d_index]) 
-                | (match1[3] & tlb_d0[d_index]) 
-                | (match1[4] & tlb_d0[d_index]) 
-                | (match1[5] & tlb_d0[d_index]) 
-                | (match1[6] & tlb_d0[d_index]) 
-                | (match1[7] & tlb_d0[d_index]) 
-                | (match1[8] & tlb_d0[d_index]) 
-                | (match1[9] & tlb_d0[d_index]) 
-                | (match1[10] & tlb_d0[d_index]) 
-                | (match1[11] & tlb_d0[d_index]) 
-                | (match1[12] & tlb_d0[d_index]) 
-                | (match1[13] & tlb_d0[d_index]) 
-                | (match1[14] & tlb_d0[d_index]) 
-                | (match1[15] & tlb_d0[d_index]);
+assign d_c0   = tlb_c0[d_index];
 
-assign d_v1   =   (match1[0] & tlb_v1[d_index]) 
-                | (match1[1] & tlb_v1[d_index]) 
-                | (match1[2] & tlb_v1[d_index]) 
-                | (match1[3] & tlb_v1[d_index]) 
-                | (match1[4] & tlb_v1[d_index]) 
-                | (match1[5] & tlb_v1[d_index]) 
-                | (match1[6] & tlb_v1[d_index]) 
-                | (match1[7] & tlb_v1[d_index]) 
-                | (match1[8] & tlb_v1[d_index]) 
-                | (match1[9] & tlb_v1[d_index]) 
-                | (match1[10] & tlb_v1[d_index]) 
-                | (match1[11] & tlb_v1[d_index]) 
-                | (match1[12] & tlb_v1[d_index]) 
-                | (match1[13] & tlb_v1[d_index]) 
-                | (match1[14] & tlb_v1[d_index]) 
-                | (match1[15] & tlb_v1[d_index]);
+assign d_d1   = tlb_d1[d_index];
+
+assign d_d0   = tlb_d0[d_index];
+
+assign d_v1   = tlb_v1[d_index];
             
-assign d_v0   =   (match1[0] & tlb_v0[d_index]) 
-                | (match1[1] & tlb_v0[d_index]) 
-                | (match1[2] & tlb_v0[d_index]) 
-                | (match1[3] & tlb_v0[d_index]) 
-                | (match1[4] & tlb_v0[d_index]) 
-                | (match1[5] & tlb_v0[d_index]) 
-                | (match1[6] & tlb_v0[d_index]) 
-                | (match1[7] & tlb_v0[d_index]) 
-                | (match1[8] & tlb_v0[d_index]) 
-                | (match1[9] & tlb_v0[d_index]) 
-                | (match1[10] & tlb_v0[d_index]) 
-                | (match1[11] & tlb_v0[d_index]) 
-                | (match1[12] & tlb_v0[d_index]) 
-                | (match1[13] & tlb_v0[d_index]) 
-                | (match1[14] & tlb_v0[d_index]) 
-                | (match1[15] & tlb_v0[d_index]);
+assign d_v0   = tlb_v0[d_index];
 
 
-assign  d_pfn = d_odd_page ? d_pfn1 : d_pfn0;
-assign  d_c   = d_odd_page ? d_c1   : d_c0;
-assign  d_d   = d_odd_page ? d_d1   : d_d0;
-assign  d_v   = d_odd_page ? d_v1   : d_v0;
+// assign  d_pfn = d_odd_page ? d_pfn1 : d_pfn0;
+// assign  d_c   = d_odd_page ? d_c1   : d_c0;
+// assign  d_d   = d_odd_page ? d_d1   : d_d0;
+// assign  d_v   = d_odd_page ? d_v1   : d_v0;
+
+assign {d_pfn,d_c,d_d,d_v} = d_odd_page ? {d_pfn1,d_c1,d_d1,d_v1} : {d_pfn0,d_c0,d_d0,d_v0};
 
 
 

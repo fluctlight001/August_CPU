@@ -41,17 +41,17 @@ module mem(
             data_sram_rdata_r <= 32'b0;
             flag <= 1'b0;
         end
-        else if (stall[6] == `Stop && stall[7] == `NoStop) begin
+        else if (stall[7] == `Stop && stall[8] == `NoStop) begin
             dc_to_mem_bus_r <= `DC_TO_MEM_WD'b0;
             data_sram_rdata_r <= 32'b0;
             flag <= 1'b0;
         end
-        else if (stall[6] == `NoStop&&flag) begin
+        else if (stall[7] == `NoStop&&flag) begin
             dc_to_mem_bus_r <= dc_to_mem_bus;
             data_sram_rdata_r <= data_sram_rdata_buffer;
             flag <= 1'b0;
         end
-        else if (stall[6] == `NoStop&&~flag) begin
+        else if (stall[7] == `NoStop&&~flag) begin
             dc_to_mem_bus_r <= dc_to_mem_bus;
             data_sram_rdata_r <= data_sram_rdata;
             flag <= 1'b0;

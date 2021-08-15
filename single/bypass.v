@@ -14,6 +14,11 @@ module bypass(
     input wire [`RegBus] ex_wdata,
     input wire [6:0] ex_ram_ctrl,
 
+    input wire dtlb_we,
+    input wire [`RegAddrBus] dtlb_waddr,
+    input wire [`RegBus] dtlb_wdata,
+    input wire [6:0] dtlb_ram_ctrl,
+
     input wire dt_we,
     input wire [`RegAddrBus] dt_waddr,
     input wire [`RegBus] dt_wdata,
@@ -73,11 +78,11 @@ module bypass(
     //     end
     // end
 
-    wire rs_ex_ok, rs_dt_ok, rs_dcache_ok, rs_mem_ok;
-    wire rt_ex_ok, rt_dt_ok, rt_dcache_ok, rt_mem_ok;
+    wire rs_ex_ok, rs_dtlb_ok, rs_dt_ok, rs_dcache_ok, rs_mem_ok;
+    wire rt_ex_ok, rt_dtlb_ok, rt_dt_ok, rt_dcache_ok, rt_mem_ok;
     wire sel_rs_forward, sel_rt_forward;
     wire [`RegBus] rs_forward_data, rt_forward_data;
-    wire ex_is_load, dt_is_load, dc_is_load;
+    wire ex_is_load, dtlb_is_load, dt_is_load, dc_is_load;
     // wire stallreq_for_load_next;
     wire op_load, inst_lb, inst_lbu, inst_lh, inst_lhu, inst_lw, inst_lwl, inst_lwr;
     assign {
@@ -221,45 +226,50 @@ module bypass(
             flag <= 1'b0;
             mem_result_r <= 32'b0;
         end
-        else if (stall[6]==`NoStop&&flag) begin
+        else if (stall[7]==`NoStop&&flag) begin
             flag <= 1'b0;
             mem_result_r <= 32'b0;
         end
-        else if (stall[6]==`Stop&&stall[7]==`Stop&& ~flag) begin
+        else if (stall[7]==`Stop&&stall[8]==`Stop&& ~flag) begin
             flag <= 1'b1;
             mem_result_r <= mem_result;
         end
     end
 
     assign rs_ex_ok     = (rs_rf_raddr == ex_waddr) && ex_we ? 1'b1 : 1'b0;
+    assign rs_dtlb_ok   = (rs_rf_raddr == dtlb_waddr) && dtlb_we ? 1'b1 : 1'b0;
     assign rs_dt_ok     = (rs_rf_raddr == dt_waddr) && dt_we ? 1'b1 : 1'b0;
     assign rs_dcache_ok = (rs_rf_raddr == dcache_waddr) && dcache_we ? 1'b1 : 1'b0;
     assign rs_mem_ok    = (rs_rf_raddr == mem_waddr) && mem_we ? 1'b1 : 1'b0;
 
     assign rt_ex_ok     = (rt_rf_raddr == ex_waddr) && ex_we ? 1'b1 : 1'b0;
+    assign rt_dtlb_ok   = (rt_rf_raddr == dtlb_waddr) && dtlb_we ? 1'b1 : 1'b0;
     assign rt_dt_ok     = (rt_rf_raddr == dt_waddr) && dt_we ? 1'b1 : 1'b0;
     assign rt_dcache_ok = (rt_rf_raddr == dcache_waddr) && dcache_we ? 1'b1 : 1'b0;
     assign rt_mem_ok    = (rt_rf_raddr == mem_waddr) && mem_we ? 1'b1 : 1'b0;
 
-    assign sel_rs_forward = rs_ex_ok | rs_dt_ok | rs_dcache_ok | rs_mem_ok;
-    assign sel_rt_forward = rt_ex_ok | rt_dt_ok | rt_dcache_ok | rt_mem_ok;
+    assign sel_rs_forward = rs_ex_ok | rs_dtlb_ok | rs_dt_ok | rs_dcache_ok | rs_mem_ok;
+    assign sel_rt_forward = rt_ex_ok | rt_dtlb_ok | rt_dt_ok | rt_dcache_ok | rt_mem_ok;
 
     assign rs_forward_data = rs_ex_ok ? ex_wdata
+                           : rs_dtlb_ok ? dtlb_wdata
                            : rs_dt_ok ? dt_wdata
                            : rs_dcache_ok ? op_load ? flag ? mem_result_r : mem_result : dcache_wdata
                            : rs_mem_ok ? mem_wdata
                            : 32'b0;
     assign rt_forward_data = rt_ex_ok ? ex_wdata
+                           : rt_dtlb_ok ? dtlb_wdata
                            : rt_dt_ok ? dt_wdata
                            : rt_dcache_ok ? op_load ? flag ? mem_result_r : mem_result : dcache_wdata
                            : rt_mem_ok ? mem_wdata
                            : 32'b0;
 
     assign ex_is_load = ex_ram_ctrl[6] & ~(|ex_ram_ctrl[5:0]);
+    assign dtlb_is_load = dtlb_ram_ctrl[6] & ~(|dtlb_ram_ctrl[5:0]);
     assign dt_is_load = dt_ram_ctrl[6] & ~(|dt_ram_ctrl[5:0]);
     assign dc_is_load = dc_ram_ctrl[6] & ~(|dc_ram_ctrl[5:0]);
 
-    assign stallreq_for_load = (ex_is_load & (rs_ex_ok|rt_ex_ok)) | (dt_is_load & (rs_dt_ok|rt_dt_ok));// | (dc_is_load & (rs_dcache_ok|rt_dcache_ok));
+    assign stallreq_for_load = (ex_is_load & (rs_ex_ok|rt_ex_ok)) | (dtlb_is_load & (rs_dtlb_ok|rt_dtlb_ok)) | (dt_is_load & (rs_dt_ok|rt_dt_ok));// | (dc_is_load & (rs_dcache_ok|rt_dcache_ok));
     // assign stallreq_for_load = stallreq_for_load_next;
     always @ (posedge clk) begin
         if (rst) begin

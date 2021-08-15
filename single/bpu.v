@@ -16,7 +16,7 @@ module bpu (
     reg [31:0] branch_history_pc [1:0];
     reg [31:0] branch_target [1:0];
     reg lru;
-    reg [31:0] ic_pc, id_pc, ex_pc;
+    reg [31:0] it_pc, ic_pc, id_pc, ex_pc;
     reg ic_bp_e, id_bp_e, ex_bp_e;
     reg [31:0] ic_bp_target, id_bp_target, ex_bp_target;
 
@@ -77,28 +77,52 @@ module bpu (
         end
     end
     
-    assign hit_way0 = valid[0] & (branch_history_pc[0] == ic_pc);
-    assign hit_way1 = valid[1] & (branch_history_pc[1] == ic_pc);
-    assign bp_e = hit_way0 | hit_way1;
+    assign hit_way0 = valid[0] & (branch_history_pc[0] == it_pc);
+    assign hit_way1 = valid[1] & (branch_history_pc[1] == it_pc);
+    assign bp_e = flush ? 1'b0 : hit_way0 | hit_way1;
     assign bp_target = hit_way0 ? branch_target[0]
                      : hit_way1 ? branch_target[1] : 32'b0;
 
 
 
 // time control
+    // it
+    always @ (posedge clk) begin
+        if (rst) begin
+            it_pc <= 32'b0;
+        end
+        else if (flush|br_e) begin
+            it_pc <= 32'b0;
+        end
+        else if (stall[1] == `Stop && stall[2] == `NoStop)begin
+            it_pc <= 32'b0;
+        end
+        else if (stall[1] == `NoStop) begin
+            it_pc <= if_pc;
+        end
+    end
+
     // ic
     always @ (posedge clk) begin
         if (rst) begin
             ic_pc <= 32'b0;
+            ic_bp_e <= 1'b0;
+            ic_bp_target <= 32'b0;
         end
         else if (flush|br_e) begin
             ic_pc <= 32'b0;
+            ic_bp_e <= 1'b0;
+            ic_bp_target <= 32'b0;
         end
         else if (stall[1] == `Stop && stall[2] == `NoStop)begin
             ic_pc <= 32'b0;
+            ic_bp_e <= 1'b0;
+            ic_bp_target <= 32'b0;
         end
         else if (stall[1] == `NoStop) begin
-            ic_pc <= if_pc;
+            ic_pc <= it_pc;
+            ic_bp_e <= bp_e;
+            ic_bp_target <= bp_target;
         end
     end
 
@@ -121,8 +145,8 @@ module bpu (
         end
         else if (stall[2] == `NoStop) begin
             id_pc <= ic_pc;
-            id_bp_e <= bp_e;
-            id_bp_target <= bp_target;
+            id_bp_e <= ic_bp_e;
+            id_bp_target <= ic_bp_target;
         end
     end
 

@@ -17,12 +17,12 @@ module ctrl (
 );
     always @ (*) begin
         if (rst) begin
-           stall <=  9'b0;
+           stall <=  10'b0;
            flush <= `False_v;
            new_pc <= `ZeroWord;
         end
         else if (excepttype_i != `ZeroWord) begin
-            stall <= 9'b0;
+            stall <= 10'b0;
             flush <= `True_v;
             new_pc <= `ZeroWord;
             case (excepttype_i)
@@ -77,22 +77,22 @@ module ctrl (
             endcase
         end
         else if (stallreq_from_icache|stallreq_from_dcache|stallreq_from_uncache) begin
-            stall <= 9'b011111111;
+            stall <= 10'b0111111111;
             flush <= `False_v;
             new_pc <= `ZeroWord;
         end
         else if (stallreq_for_ex) begin
-            stall <= 9'b000011111;
+            stall <= 10'b0000011111;
             flush <= `False_v;
             new_pc <= `ZeroWord;
         end
         else if(stallreq_for_load) begin
-            stall <= 9'b000001111;
+            stall <= 10'b0000001111;
             flush <= `False_v;
             new_pc <= `ZeroWord;
         end
         else begin
-            stall <= 9'b0;
+            stall <= 10'b0;
             flush <= 1'b0;
             new_pc <= 32'b0;
         end
