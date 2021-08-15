@@ -23,10 +23,10 @@ module tlb #(
 
     //tlb search port data
     input wire          data_ren,
-    (*mark_debug="true"*)input wire          data_wen,
-    (*mark_debug="true"*)input wire  [31:0]  data_vaddr,
-    (*mark_debug="true"*)output wire         data_uncached,
-    (*mark_debug="true"*)output wire [19:0]  data_tag,
+    input wire          data_wen,
+    input wire  [31:0]  data_vaddr,
+    output wire         data_uncached,
+    output wire [19:0]  data_tag,
 
     output wire [31:0]  p_index,
 
@@ -163,17 +163,17 @@ always @(posedge clk) begin
 end
 
 //read
-assign r_vpn2 = (r_index == w_index && we == 1'b1) ? w_vpn2 : tlb_vpn2[r_index];
-assign r_asid = (r_index == w_index && we == 1'b1) ? w_asid : tlb_asid[r_index];
-assign r_g    = (r_index == w_index && we == 1'b1) ? w_g    : tlb_g[r_index];
-assign r_pfn0 = (r_index == w_index && we == 1'b1) ? w_pfn0 : tlb_pfn0[r_index];
-assign r_c0   = (r_index == w_index && we == 1'b1) ? w_c0   : tlb_c0[r_index];
-assign r_d0   = (r_index == w_index && we == 1'b1) ? w_d0   : tlb_d0[r_index];
-assign r_v0   = (r_index == w_index && we == 1'b1) ? w_v0   : tlb_v0[r_index];
-assign r_pfn1 = (r_index == w_index && we == 1'b1) ? w_pfn1 : tlb_pfn1[r_index];
-assign r_c1   = (r_index == w_index && we == 1'b1) ? w_c1   : tlb_c1[r_index];
-assign r_d1   = (r_index == w_index && we == 1'b1) ? w_d1   : tlb_d1[r_index];
-assign r_v1   = (r_index == w_index && we == 1'b1) ? w_v1   : tlb_v1[r_index];
+assign r_vpn2 = tlb_vpn2[r_index];
+assign r_asid = tlb_asid[r_index];
+assign r_g    = tlb_g[r_index];
+assign r_pfn0 = tlb_pfn0[r_index];
+assign r_c0   = tlb_c0[r_index];
+assign r_d0   = tlb_d0[r_index];
+assign r_v0   = tlb_v0[r_index];
+assign r_pfn1 = tlb_pfn1[r_index];
+assign r_c1   = tlb_c1[r_index];
+assign r_d1   = tlb_d1[r_index];
+assign r_v1   = tlb_v1[r_index];
 
 assign r_hi   = {r_vpn2,5'b0,r_asid};
 assign r_lo0  = {6'b0,r_pfn0,r_c0,r_d0,r_v0,r_g};

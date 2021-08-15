@@ -17,8 +17,10 @@ module cp0_reg(
     output wire [31:0] data_o,
 
     output reg [31:0] index_o,
+    output reg [31:0] random_o,
     output reg [31:0] entrylo0_o,
     output reg [31:0] entrylo1_o,
+    output reg [31:0] wired_o,
     output reg [31:0] badvaddr_o,
     output reg [31:0] count_o,
     output reg [31:0] entryhi_o,
@@ -27,8 +29,11 @@ module cp0_reg(
     output reg [31:0] cause_o,
     output reg [31:0] epc_o,
     output reg [31:0] prid_o,
+    output reg [31:0] ebase_o,
     output reg [31:0] config_o,
     output reg [31:0] config1_o,
+    output reg [31:0] taglo_o,
+    output reg [31:0] taghi_o,
 
     output reg [31:0] timer_int_o,
 
@@ -69,8 +74,10 @@ module cp0_reg(
     always @ (posedge clk) begin
         if (rst) begin
             index_o <= {1'b1,31'b0};
+            random_o <= {28'b0,4'b1111};
             entrylo0_o <= 32'b0;
             entrylo1_o <= 32'b0;
+            wired_o <= 32'b0;
             badvaddr_o <= 32'b0;
             count_o <= 32'b0;
             entryhi_o <= 32'b0;
@@ -79,8 +86,11 @@ module cp0_reg(
             cause_o <= 32'b0;
             epc_o <= 32'b0;
             prid_o <= 32'h00004220; // 0x4E 0x45 "NE"
+            ebase_o <= {1'b1,31'b0};
             config_o <= 32'b1_000000000000000_0_00_000_001_0000_010;
             config1_o <= 32'b0_000000_000_100_001_000_100_001_0_0_0_0_0_0_0;
+            taglo_o <= 32'b0;
+            taghi_o <= 32'b0;
             timer_int_o <= 32'b0;
         end
         else begin
@@ -110,6 +120,9 @@ module cp0_reg(
                     `CP0_REG_ENTRYLO1:begin
                         entrylo1_o <= {6'b0,data_i[25:0]};
                     end
+                    `CP0_REG_WIRED:begin
+                        wired_o[3:0] <= data_i[3:0];
+                    end
                     `CP0_REG_BADVADDR:begin
                         badvaddr_o <= data_i;
                     end
@@ -132,6 +145,19 @@ module cp0_reg(
                         cause_o[9:8] <= data_i[9:8];
                         cause_o[23] <= data_i[23];
                         cause_o[22] <= data_i[22];
+                    end
+                    `CP0_REG_PRID:begin
+                        case(wsel_i)
+                            3'b1:begin
+                                ebase_o[29:12] <= data_i[29:12]; 
+                            end
+                        endcase 
+                    end
+                    `CP0_REG_TAGLO:begin
+                        taglo_o <= data_i;
+                    end
+                    `CP0_REG_TAGHI:begin
+                        taghi_o <= data_i;
                     end
                     default:begin
                         
@@ -350,11 +376,17 @@ module cp0_reg(
                 `CP0_REG_INDEX:begin
                     data_r <= index_o;
                 end
+                `CP0_REG_RANDOM:begin
+                    data_r <= random_o;
+                end
                 `CP0_REG_ENTRYLO0:begin
                     data_r <= entrylo0_o;
                 end
                 `CP0_REG_ENTRYLO1:begin
                     data_r <= entrylo1_o;
+                end
+                `CP0_REG_WIRED:begin
+                    data_r <= wired_o;
                 end
                 `CP0_REG_BADVADDR:begin
                     data_r <= badvaddr_o;
@@ -378,7 +410,14 @@ module cp0_reg(
                     data_r <= epc_o;
                 end
                 `CP0_REG_PRID:begin
-                    data_r <= prid_o;
+                    case(rsel_i)
+                        3'b0:begin
+                            data_r <= prid_o;
+                        end
+                        3'b1:begin
+                            data_r <= ebase_o;
+                        end
+                    endcase
                 end
                 `CP0_REG_CONFIG:begin
                     case(rsel_i)
@@ -392,6 +431,12 @@ module cp0_reg(
                             data_r <= `ZeroWord;
                         end
                     endcase
+                end
+                `CP0_REG_TAGLO:begin
+                    data_r <= taglo_o;
+                end
+                `CP0_REG_TAGHI:begin
+                    data_r <= taghi_o;
                 end
                 default:begin
                     data_r <= `ZeroWord;

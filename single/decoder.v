@@ -402,10 +402,10 @@ module decoder (
     };
     
 // tlb part
-    assign again_flag = inst_tlbp | inst_tlbr | inst_tlbwi      // cp0_op[4]|cp0_op[3]|cp0_op[2];
-                      | i_index_invalid 
-                      | i_index_store_tag
-                      | i_hit_invalid; 
+    assign again_flag = inst_tlbp | inst_tlbr | inst_tlbwi;      // cp0_op[4]|cp0_op[3]|cp0_op[2];
+                    //   | i_index_invalid 
+                    //   | i_index_store_tag
+                    //   | i_hit_invalid; 
 
 // cache part
     assign cache_op = {

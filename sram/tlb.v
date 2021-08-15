@@ -23,10 +23,10 @@ module tlb #(
 
     //tlb search port data
     input wire          data_ren,
-    (*mark_debug="true"*)input wire          data_wen,
-    (*mark_debug="true"*)input wire  [31:0]  data_vaddr,
-    (*mark_debug="true"*)output wire         data_uncached,
-    (*mark_debug="true"*)output wire [19:0]  data_tag,
+    input wire          data_wen,
+    input wire  [31:0]  data_vaddr,
+    output wire         data_uncached,
+    output wire [19:0]  data_tag,
 
     output wire [31:0]  p_index,
 

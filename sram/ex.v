@@ -430,12 +430,14 @@ module ex (
 
     reg data_sram_wen_r;
     reg [3:0] data_sram_sel_r;
+    reg [31:0] data_sram_addr_r;
     reg [31:0] data_sram_wdata_r;
     
     always @ (*) begin
         case(1'b1)
             inst_lb,inst_lbu:begin
                 data_sram_wen_r <= 1'b0;
+                data_sram_addr_r = alu_result; 
                 data_sram_wdata_r <= 32'b0;
                 case(alu_result[1:0])
                     2'b00:begin
@@ -457,6 +459,7 @@ module ex (
             end
             inst_lh,inst_lhu:begin
                 data_sram_wen_r <= 1'b0;
+                data_sram_addr_r = alu_result; 
                 data_sram_wdata_r <= 32'b0;
                 case(alu_result[1:0])
                     2'b00:begin
@@ -472,11 +475,13 @@ module ex (
             end
             inst_lw:begin
                 data_sram_wen_r <= 1'b0;
+                data_sram_addr_r = alu_result; 
                 data_sram_wdata_r <= 32'b0;
                 data_sram_sel_r = 4'b1111;
             end
             inst_lwl:begin
                 data_sram_wen_r <= 1'b0;
+                data_sram_addr_r = {alu_result[31:2],2'b0}; 
                 data_sram_wdata_r <= 32'b0;
                 case(alu_result[1:0])
                     2'b00:begin
@@ -498,6 +503,7 @@ module ex (
             end
             inst_lwr:begin
                 data_sram_wen_r <= 1'b0;
+                data_sram_addr_r = alu_result; 
                 data_sram_wdata_r <= 32'b0;
                 case(alu_result[1:0])
                     2'b00:begin
@@ -519,6 +525,7 @@ module ex (
             end
             inst_sb:begin
                 data_sram_wen_r <= 1'b1;
+                data_sram_addr_r = alu_result; 
                 data_sram_wdata_r = {4{rf_rdata2_bp[7:0]}};
                 case(alu_result[1:0])
                     2'b00:begin
@@ -540,6 +547,7 @@ module ex (
             end
             inst_sh:begin
                 data_sram_wen_r <= 1'b1;
+                data_sram_addr_r = alu_result; 
                 data_sram_wdata_r = {2{rf_rdata2_bp[15:0]}};
                 case(alu_result[1:0])
                     2'b00:begin
@@ -555,24 +563,29 @@ module ex (
             end
             inst_sw:begin
                 data_sram_wen_r <= 1'b1;
+                data_sram_addr_r = alu_result; 
                 data_sram_wdata_r = rf_rdata2_bp;
                 data_sram_sel_r = 4'b1111;
             end
             inst_swl:begin
                 data_sram_wen_r <= 1'b1;
-                data_sram_wdata_r = rf_rdata2_bp;
-                case(alu_result[1:0])
+                data_sram_addr_r = {alu_result[31:2],2'b0}; 
+               case(alu_result[1:0])
                     2'b00:begin
                         data_sram_sel_r = 4'b0001;
+                        data_sram_wdata_r = {24'b0,rf_rdata2_bp[31:24]};
                     end
                     2'b01:begin
                         data_sram_sel_r = 4'b0011;
+                        data_sram_wdata_r = {16'b0,rf_rdata2_bp[31:16]};
                     end
                     2'b10:begin
                         data_sram_sel_r = 4'b0111;
+                        data_sram_wdata_r = {8'b0,rf_rdata2_bp[31:8]};
                     end
                     2'b11:begin
                         data_sram_sel_r = 4'b1111;
+                        data_sram_wdata_r = rf_rdata2_bp;
                     end
                     default:begin
                         data_sram_sel_r = 4'b0;
@@ -581,19 +594,23 @@ module ex (
             end
             inst_swr:begin
                 data_sram_wen_r <= 1'b1;
-                data_sram_wdata_r = rf_rdata2_bp;
+                data_sram_addr_r = alu_result; 
                 case(alu_result[1:0])
                     2'b00:begin
                         data_sram_sel_r = 4'b1111;
+                        data_sram_wdata_r = rf_rdata2_bp;
                     end
                     2'b01:begin
                         data_sram_sel_r = 4'b1110;
+                        data_sram_wdata_r = {rf_rdata2_bp[23:0],8'b0};
                     end
                     2'b10:begin
                         data_sram_sel_r = 4'b1100;
+                        data_sram_wdata_r = {rf_rdata2_bp[15:0],16'b0};
                     end
                     2'b11:begin
                         data_sram_sel_r = 4'b1000;
+                        data_sram_wdata_r = {rf_rdata2_bp[7:0],24'b0};
                     end
                     default:begin
                         data_sram_sel_r = 4'b0;
@@ -602,6 +619,7 @@ module ex (
             end
             default:begin
                 data_sram_wen_r <= 1'b0;
+                data_sram_addr_r = 32'b0;
                 data_sram_wdata_r = 32'b0;
                 data_sram_sel_r = 4'b0000;
             end
@@ -615,7 +633,7 @@ module ex (
     assign data_sram_en = (|excepttype_o)|stop_store ? 1'b0 : data_ram_en;
     assign data_sram_wen = data_sram_wen_r;
     assign data_sram_sel = data_sram_sel_r;
-    assign data_sram_addr = alu_result; 
+    assign data_sram_addr = data_sram_addr_r;
     assign data_sram_wdata = data_sram_wdata_r;
 
     assign ex_dt_sram_bus = {

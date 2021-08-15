@@ -72,7 +72,7 @@ module mem(
     wire data_ram_en;
     wire [3:0] data_ram_wen;
     wire [31:0] alu_result;
-    wire [31:0] mem_result;
+    // wire [31:0] mem_result;
     wire [31:0] excepttype_arr;
     wire [31:0] bad_vaddr;
     wire is_in_delayslot;
@@ -246,13 +246,13 @@ module mem(
                         mem_result_r = data_sram_rdata_r;
                     end
                     2'b01:begin
-                        mem_result_r = {rt_rf_rdata[31:24],data_sram_rdata_r[23:0]};
+                        mem_result_r = {rt_rf_rdata[31:24],data_sram_rdata_r[31:8]};
                     end
                     2'b10:begin
-                        mem_result_r = {rt_rf_rdata[31:16],data_sram_rdata_r[15:0]};
+                        mem_result_r = {rt_rf_rdata[31:16],data_sram_rdata_r[31:16]};
                     end
                     2'b11:begin
-                        mem_result_r = {rt_rf_rdata[31:8],data_sram_rdata_r[7:0]};
+                        mem_result_r = {rt_rf_rdata[31:8],data_sram_rdata_r[31:24]};
                     end
                     default:begin
                         mem_result_r = 32'b0;

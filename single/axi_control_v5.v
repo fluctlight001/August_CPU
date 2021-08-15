@@ -230,6 +230,12 @@ module axi_control_v5(
                             4'b0011,4'b1100:begin
                                 arsize <= 3'b001;
                             end
+                            4'b0111:begin
+                                arsize <= 3'b010;
+                            end
+                            4'b1110:begin
+                                arsize <= 3'b010;
+                            end
                             4'b1111:begin
                                 arsize <= 3'b010;
                             end
@@ -360,6 +366,12 @@ module axi_control_v5(
                                 end
                                 4'b0011,4'b1100:begin
                                     awsize <= 3'b001;
+                                end
+                                4'b0111:begin
+                                    awsize <= 3'b010;
+                                end
+                                4'b1110:begin
+                                    awsize <= 3'b010;
                                 end
                                 4'b1111:begin
                                     awsize <= 3'b010;

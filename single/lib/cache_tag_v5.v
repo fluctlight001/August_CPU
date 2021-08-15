@@ -11,7 +11,9 @@ module cache_tag_v5(
 
     // sram_port
     input wire sram_en,
-    input wire [31:0] sram_addr,
+    // input wire [31:0] sram_addr,
+    input wire [`TAG_WIDTH-2:0] sram_tag,
+    input wire [5:0] sram_index,
     // input wire [31:0] sram_wdata,
     // output wire [31:0] sram_rdata,
     // axi
@@ -32,12 +34,10 @@ module cache_tag_v5(
     input wire index_wb_invalid,
     input wire hit_wb_invalid
 );
-    reg [`TAG_WIDTH-1:0] tag_way0 [`INDEX_WIDTH-1:0]; // v + tag 
+    reg [`TAG_WIDTH-1:0] tag_way0 [`INDEX_WIDTH-1:0]; // v + sram_tag 
     reg [`TAG_WIDTH-1:0] tag_way1 [`INDEX_WIDTH-1:0];
     reg [`INDEX_WIDTH-1:0] lru_r;
-    wire [`TAG_WIDTH-2:0] tag;
-    wire [5:0] index;
-    wire [5:0] offset;
+    // wire [5:0] offset;
     wire cached_v;
     // wire [`TAG_WIDTH-1:0] tag_ram_out;
 
@@ -50,17 +50,17 @@ module cache_tag_v5(
     
     assign cached_v = cached;
     
-    assign {
-        tag,
-        index,
-        offset
-    } = sram_addr;
+    // assign {
+    //     sram_tag,
+    //     sram_index,
+    //     offset
+    // } = sram_addr;
 
     // tag_dist_ram u_tag_ram(
     //     .clk(clk),
     //     .we(refresh),
-    //     .a(index),
-    //     .d({cached_v,tag}),
+    //     .a(sram_index),
+    //     .d({cached_v,sram_tag}),
     //     .spo(tag_ram_out)
     // );
 
@@ -70,13 +70,13 @@ module cache_tag_v5(
             lru_r  <= {`INDEX_WIDTH'b0};
         end
         else if (hit_way0 & ~hit_way1) begin
-            lru_r[index] <= 1'b1;
+            lru_r[sram_index] <= 1'b1;
         end
         else if (~hit_way0 & hit_way1) begin
-            lru_r[index] <= 1'b0;
+            lru_r[sram_index] <= 1'b0;
         end
         else if (refresh) begin
-            lru_r[index] <= ~lru_r[index];
+            lru_r[sram_index] <= ~lru_r[sram_index];
         end
     end
 
@@ -148,14 +148,14 @@ module cache_tag_v5(
             tag_way0[ 62] <= 21'b0;
             tag_way0[ 63] <= 21'b0;
         end
-        else if (refresh&(~lru_r[index])) begin
-            tag_way0[index] <= {cached_v,tag};
+        else if (refresh&(~lru_r[sram_index])) begin
+            tag_way0[sram_index] <= {cached_v,sram_tag};
         end
-        else if ((index_invalid|index_wb_invalid) & ~tag[0]) begin
-            tag_way0[index] <= 21'b0;
+        else if ((index_invalid|index_wb_invalid) & ~sram_tag[0]) begin
+            tag_way0[sram_index] <= 21'b0;
         end
         else if ((hit_invalid|hit_wb_invalid) & hit_way0) begin
-            tag_way0[index] <= 21'b0;
+            tag_way0[sram_index] <= 21'b0;
         end
     end
 
@@ -227,42 +227,42 @@ module cache_tag_v5(
             tag_way1[ 62] <= 21'b0;
             tag_way1[ 63] <= 21'b0;
         end
-        else if (refresh&lru_r[index]) begin
-            tag_way1[index] <= {cached_v,tag};
+        else if (refresh&lru_r[sram_index]) begin
+            tag_way1[sram_index] <= {cached_v,sram_tag};
         end
-        else if (index_invalid & tag[0]) begin
-            tag_way1[index] <= 21'b0;
+        else if (index_invalid & sram_tag[0]) begin
+            tag_way1[sram_index] <= 21'b0;
         end
         else if (hit_invalid & hit_way1) begin
-            tag_way1[index] <= 21'b0;
+            tag_way1[sram_index] <= 21'b0;
         end
     end
 
-    // assign hit = cached_v & sram_en & ({1'b1,tag} == tag_ram_out);
-    assign lru = index_wb_invalid ? tag[0] 
+    // assign hit = cached_v & sram_en & ({1'b1,sram_tag} == tag_ram_out);
+    assign lru = index_wb_invalid ? sram_tag[0] 
                : hit_wb_invalid & (hit_way0|hit_way1) ? hit_way0 ? 1'b0 : 1'b1 
-               : lru_r[index];
+               : lru_r[sram_index];
     assign hit = {
-        ~flush & cached_v & sram_en & hit_way1,
-        ~flush & cached_v & sram_en & hit_way0
+        ~flush & sram_en & hit_way1 & cached_v,
+        ~flush & sram_en & hit_way0 & cached_v
     };
-    assign hit_way0 = ({1'b1,tag} == tag_way0[index]);
-    assign hit_way1 = ({1'b1,tag} == tag_way1[index]);
-    assign miss = cached_v & sram_en & ~(hit_way0|hit_way1) & ~flush;
+    assign hit_way0 = ({1'b1,sram_tag} == tag_way0[sram_index]);
+    assign hit_way1 = ({1'b1,sram_tag} == tag_way1[sram_index]);
+    assign miss = sram_en & ~(hit_way0|hit_way1) & ~flush & cached_v;
     assign stallreq = miss;
-    assign axi_raddr = cached_v ? {sram_addr[31:6],6'b0} : sram_addr;
+    assign axi_raddr = {sram_tag,sram_index,6'b0};
     assign write_back = flush ? 1'b0 : lru ? write_back_way1 : write_back_way0;
-    assign write_back_way0 = cached_v & sram_en & miss & tag_way0[index][`TAG_WIDTH-1];
-    assign write_back_way1 = cached_v & sram_en & miss & tag_way1[index][`TAG_WIDTH-1];
-    assign axi_waddr = lru_r[index] ? axi_waddr_way1 : axi_waddr_way0;
+    assign write_back_way0 = sram_en & miss & tag_way0[sram_index][`TAG_WIDTH-1] & cached_v;
+    assign write_back_way1 = sram_en & miss & tag_way1[sram_index][`TAG_WIDTH-1] & cached_v;
+    assign axi_waddr = lru_r[sram_index] ? axi_waddr_way1 : axi_waddr_way0;
     assign axi_waddr_way0 = {
-        tag_way0[index][`TAG_WIDTH-2:0],
-        index,
+        tag_way0[sram_index][`TAG_WIDTH-2:0],
+        sram_index,
         6'b0
     };
     assign axi_waddr_way1 = {
-        tag_way1[index][`TAG_WIDTH-2:0],
-        index,
+        tag_way1[sram_index][`TAG_WIDTH-2:0],
+        sram_index,
         6'b0
     };
 endmodule

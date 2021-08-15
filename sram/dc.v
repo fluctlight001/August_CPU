@@ -26,7 +26,7 @@ module dc(
             dc_to_mem_bus <= `DC_TO_MEM_WD'b0;
         end
         else if (stall[5] == `NoStop) begin
-            dc_to_mem_bus <= {dt_to_dc_bus[258:153],d_modify,d_invalid,d_refill,dt_to_dc_bus[149:0]};
+            dc_to_mem_bus <= {dt_to_dc_bus[274:153],d_modify,d_invalid,d_refill,dt_to_dc_bus[149:0]};
         end
     end
 

@@ -193,13 +193,13 @@ module bypass(
                         mem_result = data_sram_rdata;
                     end
                     2'b01:begin
-                        mem_result = {reg2[31:24],data_sram_rdata[23:0]};
+                        mem_result = {reg2[31:24],data_sram_rdata[31:8]};
                     end
                     2'b10:begin
-                        mem_result = {reg2[31:16],data_sram_rdata[15:0]};
+                        mem_result = {reg2[31:16],data_sram_rdata[31:16]};
                     end
                     2'b11:begin
-                        mem_result = {reg2[31:8],data_sram_rdata[7:0]};
+                        mem_result = {reg2[31:8],data_sram_rdata[31:24]};
                     end
                     default:begin
                         mem_result = 32'b0;
