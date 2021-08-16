@@ -80,7 +80,8 @@ module bpu (
     assign hit_way0 = valid[0] & (branch_history_pc[0] == it_pc);
     assign hit_way1 = valid[1] & (branch_history_pc[1] == it_pc);
     assign bp_e = flush ? 1'b0 : hit_way0 | hit_way1;
-    assign bp_target = hit_way0 ? branch_target[0]
+    assign bp_target = flush ? 32'b0
+                     : hit_way0 ? branch_target[0]
                      : hit_way1 ? branch_target[1] : 32'b0;
 
 

@@ -27,7 +27,6 @@ module dt(
     output wire [31:0] data_sram_wdata
 );
     reg [`DATA_SRAM_WD-1:0] dtlb_to_dt_sram_bus_r;
-    wire data_sram_en_w;
 
     always @ (posedge clk) begin
         if (rst) begin
@@ -52,18 +51,17 @@ module dt(
             data_uncached_o <= data_uncached;
             data_tag_o <= data_tag;
             dt_to_dc_bus <= {dtlb_to_dt_bus[274:153],d_modify,d_invalid,d_refill,dtlb_to_dt_bus[149:0]};
-            dtlb_to_dt_sram_bus_r <= dtlb_to_dt_sram_bus;
+            dtlb_to_dt_sram_bus_r <= {dtlb_to_dt_sram_bus[`DATA_SRAM_WD-1]&~d_refill&~d_invalid&~d_modify,dtlb_to_dt_sram_bus[`DATA_SRAM_WD-2:0]};
         end
     end
 
     assign {
-        data_sram_en_w,
+        data_sram_en,
         data_sram_wen,
         data_sram_sel,
         data_sram_addr,
         data_sram_wdata
     } = dtlb_to_dt_sram_bus_r;
 
-    assign data_sram_en = data_sram_en_w & ~d_refill & ~d_invalid & ~d_modify;
     
 endmodule 
