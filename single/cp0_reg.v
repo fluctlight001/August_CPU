@@ -93,14 +93,16 @@ module cp0_reg(
             epc_o <= 32'b0;
             prid_o <= 32'h00004220; // 0x4E 0x45 "NE"
             ebase_o <= {1'b1,31'b0};
-            config_o <= 32'b1_000000000000000_0_00_000_001_0000_010;
+            config_o <= 32'b1_000000000000000_0_00_000_001_0000_011;
             config1_o <= 32'b0_000000_000_100_001_000_100_001_0_0_0_0_0_0_0;
             taglo_o <= 32'b0;
             taghi_o <= 32'b0;
             timer_int_o <= 32'b0;
         end
         else if (stall[7]&stall[8])begin
-            
+            if (tick) begin
+                count_o <= count_o + 1'b1;
+            end
         end
         else begin
             if (tick) begin
