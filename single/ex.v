@@ -53,6 +53,7 @@ module ex (
     wire branch_likely_i;
     wire [3:0] extra_mem_op_i;
     wire [4:0] rt_rf_raddr_i;
+    wire final_inst_i;
     wire [13:0] alu_op_i;
     wire [2:0] sel_alu_src1_i;
     wire [3:0] sel_alu_src2_i;
@@ -68,6 +69,7 @@ module ex (
     reg branch_likely;
 
     assign {
+        final_inst_i,   // 242
         rt_rf_raddr_i,  // 241:237
         extra_mem_op_i, // 236:233
         branch_likely_i,// 232
@@ -99,6 +101,7 @@ module ex (
     reg [6:0] cache_op;
     reg [3:0] extra_mem_op;
     reg [4:0] rt_rf_raddr;
+    reg final_inst;
     // reg branch_likely;
     reg [13:0] alu_op;
     reg [2:0] sel_alu_src1;
@@ -131,6 +134,7 @@ module ex (
             branch_likely <= 1'b0;
             extra_mem_op <= 4'b0;
             rt_rf_raddr <= 5'b0;
+            final_inst <= 1'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -156,6 +160,7 @@ module ex (
             branch_likely <= 1'b0;
             extra_mem_op <= 4'b0;
             rt_rf_raddr <= 5'b0;
+            final_inst <= 1'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -181,6 +186,7 @@ module ex (
             branch_likely <= 1'b0;
             extra_mem_op <= 4'b0;
             rt_rf_raddr <= 5'b0;
+            final_inst <= 1'b0;
             alu_op <= 14'b0;
             sel_alu_src1 <= 3'b0;
             sel_alu_src2 <= 4'b0;
@@ -206,6 +212,7 @@ module ex (
             branch_likely <= branch_likely_i;
             extra_mem_op <= extra_mem_op_i;
             rt_rf_raddr <= rt_rf_raddr_i;
+            final_inst <= final_inst_i;
             alu_op <= alu_op_i;
             sel_alu_src1 <= sel_alu_src1_i;
             sel_alu_src2 <= sel_alu_src2_i;
@@ -277,8 +284,10 @@ module ex (
     reg stop_store;
     wire [63:0] mul_result;
     wire inst_mul;
+    wire [31:0] final_inst_ans;
     
-    assign ex_result = alu_op[12] ? hilo_result :
+    assign ex_result = final_inst ? final_inst_ans :
+                        alu_op[12] ? hilo_result :
                        rf_cp0_we ? cp0_reg_data_i :
                        inst_mul ? mul_result[31:0] : alu_result;
     assign excepttype_o = {excepttype_arr[31:16],loadassert,storeassert,excepttype_arr[13:12],ovassert,1'b0,excepttype_arr[9:0]};
@@ -312,6 +321,89 @@ module ex (
         rf_waddr,       // 36:32
         ex_result       // 31:0
     };
+
+// final inst
+    wire [5:0] opcode;
+    wire [`RegAddrBus] rs;
+    wire [`RegAddrBus] rt;
+    wire [`RegAddrBus] rd;
+    wire [`RegAddrBus] sa;
+    wire [5:0] func;
+    assign opcode = inst[31:26];
+    assign rs = inst[25:21];
+    assign rt = inst[20:16];
+    assign rd = inst[15:11];
+    assign sa = inst[10: 6];
+    assign func = inst[5:0];
+    reg [3:0] count;
+    reg [31:0] max1,max2,min1,min2;
+    wire [31:0] max1_w,max2_w,min1_w,min2_w;
+    wire [31:0] sum_w;
+    reg [31:0] sum;
+    always @ (posedge clk) begin
+        if (rst) begin
+            count <= 4'b0;
+        end
+        else if (stall[3]&stall[4])begin
+            
+        end
+        else if (rd == rs && rd == 0 && final_inst) begin
+            count <= 4'b0;
+        end
+        else if ((rd!=0 || rs !=0) && final_inst) begin
+            if (~count[0])begin
+                count[0] <= 1'b1;
+            end
+            else if (~count[1])begin
+                count[1] <= 1'b1;
+            end
+            else if(~count[2]) begin
+                count[2] <= 1'b1;
+            end
+            else if(~count[3])begin
+                count[3] <= 1'b1;
+            end
+        end
+    end
+
+    always @ (posedge clk) begin
+        if (rst) begin
+            max1 <= 32'b0;
+            max2 <= 32'b0;
+            min1 <= 32'hffffffff;
+            min2 <= 32'hffffffff;
+            sum <= 32'b0;
+        end
+        else if (stall[3]&stall[4]) begin
+            
+        end
+        else if (rd == rs && rd == 0 && final_inst) begin
+            max1 <= 32'b0;
+            max2 <= 32'b0;
+            min1 <= 32'hffffffff;
+            min2 <= 32'hffffffff;
+            sum <= 32'b0;
+        end
+        else if (final_inst) begin
+            sum <= sum_w;
+            max1 <= max1_w;
+            max2 <= max2_w;
+            min1 <= min1_w;
+            min2 <= min2_w;
+        end
+    end
+    // wire [31:0] temp_a;
+    // wire [31:0] temp_b;
+    // wire [1:0] sa;
+    // assign sa = inst[7:6];
+    // assign temp_b = rf_rdata1_bp << 1'b1;
+    // assign temp_a = rf_rdata1_bp << (sa+1);
+    assign sum_w = sum + rf_rdata1_bp;
+    assign max1_w = max1 < rf_rdata1_bp ? rf_rdata1_bp : max1;
+    assign max2_w = max1 < rf_rdata1_bp ? max1 : max2 < rf_rdata1_bp && max1 > rf_rdata1_bp ? rf_rdata1_bp : max2;
+    assign min1_w = min1 > rf_rdata1_bp ? rf_rdata1_bp : min1;
+    assign min2_w = min1 > rf_rdata1_bp ? min1 : min2 > rf_rdata1_bp && min1 < rf_rdata1_bp ? rf_rdata1_bp : min2;
+    assign final_inst_ans = count[3] ? sum - max1_w - max2_w - min1_w - min2_w + rf_rdata1_bp : 32'b0;
 
 // jump part **************************
     wire inst_beq,  inst_bne,   inst_bgez,  inst_bgtz;

@@ -165,7 +165,7 @@
 `define PC_TO_IT_WD 65
 `define IT_TO_IC_WD 65
 `define IC_TO_ID_WD 65
-`define ID_TO_EX_WD 242
+`define ID_TO_EX_WD 243
 `define EX_TO_DTLB_WD 275
 `define DTLB_TO_DT_WD 275
 `define DT_TO_DC_WD 275

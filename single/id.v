@@ -52,6 +52,7 @@ module id (
     wire [6:0] cache_op;
     wire branch_likely;
     wire [3:0] extra_mem_op;
+    wire final_inst;
     wire [13:0] alu_op;
     wire sel_load_zero_extend;
     wire data_ram_en;
@@ -66,6 +67,7 @@ module id (
     assign excepttype_o = {excepttype_decoder[31:17],excepttype_arr[16],excepttype_decoder[15:8],excepttype_arr[7:1],excepttype_decoder[0]};
 
     assign id_to_ex_bus = {
+        final_inst,     // 242
         rt_rf_raddr,    // 241:237
         extra_mem_op,   // 236:233
         branch_likely,  // 232
@@ -150,6 +152,7 @@ module id (
         .cache_op     (cache_op     ),
         .branch_likely(branch_likely),
         .extra_mem_op (extra_mem_op ),
+        .final_inst   (final_inst   ),
 
         // .sel_nextpc   (sel_nextpc   ),
         .sel_alu_src1 (sel_alu_src1 ),

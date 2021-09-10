@@ -236,6 +236,8 @@ module bypass(
         end
     end
 
+    wire rs_rf_raddr_ez = rs_rf_raddr == 5'b0;
+    wire rt_rf_raddr_ez = rt_rf_raddr == 5'b0;
     assign rs_ex_ok     = (rs_rf_raddr == ex_waddr) && ex_we ? 1'b1 : 1'b0;
     assign rs_dtlb_ok   = (rs_rf_raddr == dtlb_waddr) && dtlb_we ? 1'b1 : 1'b0;
     assign rs_dt_ok     = (rs_rf_raddr == dt_waddr) && dt_we ? 1'b1 : 1'b0;
@@ -251,13 +253,15 @@ module bypass(
     assign sel_rs_forward = rs_ex_ok | rs_dtlb_ok | rs_dt_ok | rs_dcache_ok | rs_mem_ok;
     assign sel_rt_forward = rt_ex_ok | rt_dtlb_ok | rt_dt_ok | rt_dcache_ok | rt_mem_ok;
 
-    assign rs_forward_data = rs_ex_ok ? ex_wdata
+    assign rs_forward_data = rs_rf_raddr_ez ? 32'b0
+                           : rs_ex_ok ? ex_wdata
                            : rs_dtlb_ok ? dtlb_wdata
                            : rs_dt_ok ? dt_wdata
                            : rs_dcache_ok ? op_load ? flag ? mem_result_r : mem_result : dcache_wdata
                            : rs_mem_ok ? mem_wdata
                            : 32'b0;
-    assign rt_forward_data = rt_ex_ok ? ex_wdata
+    assign rt_forward_data = rt_rf_raddr_ez ? 32'b0
+                           : rt_ex_ok ? ex_wdata
                            : rt_dtlb_ok ? dtlb_wdata
                            : rt_dt_ok ? dt_wdata
                            : rt_dcache_ok ? op_load ? flag ? mem_result_r : mem_result : dcache_wdata

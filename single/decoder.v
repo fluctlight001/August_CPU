@@ -12,6 +12,7 @@ module decoder (
     output wire [6:0] cache_op,
     output wire branch_likely,
     output wire [3:0] extra_mem_op,
+    output wire final_inst,
 
     output wire [2:0] sel_alu_src1, 
     output wire [3:0] sel_alu_src2,
@@ -40,7 +41,7 @@ module decoder (
 
     wire [63:0] op_d, func_d;
     wire [31:0] rs_d, rt_d;
-    // wire [31:0] sa_d;
+    wire [31:0] sa_d;
 
     assign opcode = inst_i[31:26];
     assign rs = inst_i[25:21];
@@ -81,7 +82,8 @@ module decoder (
     wire inst_beql, inst_bgezall, inst_bgezl, inst_bgtzl, inst_blezl, inst_bltzall, inst_bltzl, inst_bnel;
     wire inst_lwl, inst_lwr, inst_swl, inst_swr;
     wire inst_sync;
-
+    wire inst_lsa;
+    wire inst_filter;
 
     wire op_add, op_sub, op_slt, op_sltu;
     wire op_and, op_nor, op_or, op_xor;
@@ -114,7 +116,9 @@ module decoder (
                                         | inst_cache
                                         | inst_beql | inst_bgezall | inst_bgezl | inst_bgtzl | inst_blezl | inst_bltzall | inst_bltzl | inst_bnel
                                         | inst_lwl | inst_lwr | inst_swl | inst_swr
-                                        | inst_sync);
+                                        | inst_sync
+                                        | inst_lsa
+                                        | inst_filter);
 
     decoder_6_64 u0_decoder_6_64(
     	.in  (opcode),
@@ -136,10 +140,10 @@ module decoder (
         .out (rt_d )
     );
 
-    // decoder_5_32 u2_decoder_5_32(
-    // 	.in  (sa  ),
-    //     .out (sa_d )
-    // );
+    decoder_5_32 u2_decoder_5_32(
+    	.in  (sa  ),
+        .out (sa_d )
+    );
     
     assign inst_add     = op_d[6'b00_0000] & func_d[6'b10_0000];
     assign inst_addi    = op_d[6'b00_1000];
@@ -236,6 +240,8 @@ module decoder (
     assign d_hit_invalid        = inst_cache & rt_d[5'b1_0001];
     assign d_hit_wb_invalid     = inst_cache & rt_d[5'b1_0101];
 
+    assign inst_lsa     = op_d[6'b01_1100] & inst_i[10] & inst_i[9] & inst_i[8] & func_d[6'b11_0111];
+    assign inst_filter  = op_d[6'b01_1100] & rt_d[5'b0_0000] & sa_d[5'b1_1100] & func_d[6'b11_0111];
 
     // rs to reg1  
     assign sel_alu_src1[0] = inst_add | inst_addi | inst_addu | inst_addiu 
@@ -249,7 +255,9 @@ module decoder (
                            | inst_lw | inst_sb | inst_sh | inst_sw
                            | i_index_invalid | i_index_store_tag | i_hit_invalid
                            | d_index_wb_invalid | d_index_store_tag | d_hit_invalid | d_hit_wb_invalid
-                           | inst_lwl | inst_lwr | inst_swl | inst_swr; 
+                           | inst_lwl | inst_lwr | inst_swl | inst_swr
+                           | inst_lsa
+                           | inst_filter; 
     // pc to reg1
     assign sel_alu_src1[1] = inst_jal | inst_bltzal | inst_bgezal | inst_jalr;
     // sa_zero_extend to reg1
@@ -261,7 +269,8 @@ module decoder (
                            | inst_slt | inst_sltu | inst_div | inst_divu 
                            | inst_mul | inst_mult | inst_multu | inst_and | inst_nor 
                            | inst_or | inst_xor | inst_sllv | inst_sll 
-                           | inst_srav | inst_sra | inst_srlv | inst_srl;
+                           | inst_srav | inst_sra | inst_srlv | inst_srl
+                           | inst_lsa;
     // imm_sign_extend to reg2
     assign sel_alu_src2[1] = inst_addi | inst_addiu 
                            | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu 
@@ -335,14 +344,18 @@ module decoder (
                  | inst_lui | inst_and | inst_andi | inst_or | inst_ori | inst_xor | inst_xori | inst_nor 
                  | inst_mfhi | inst_mflo 
                  | inst_mfc0 
-                 | inst_mul;
+                 | inst_mul
+                 | inst_lsa
+                 | inst_filter;
 
     // store in [rd]
     assign sel_rf_dst[0] = inst_add | inst_addu | inst_sub | inst_subu | inst_slt | inst_sltu 
                          | inst_sllv | inst_sll | inst_srlv | inst_srl | inst_srav | inst_sra 
                          | inst_and | inst_or | inst_xor | inst_nor 
                          | inst_mfhi | inst_mflo 
-                         | inst_mul;
+                         | inst_mul
+                         | inst_lsa
+                         | inst_filter;
     // store in [rt] 
     assign sel_rf_dst[1] = inst_addi | inst_addiu 
                          | inst_lw | inst_lb | inst_lbu | inst_lh | inst_lhu 
@@ -366,6 +379,8 @@ module decoder (
     // assign sel_nextpc[1] = inst_beq | inst_bne;
     // assign sel_nextpc[2] = inst_jal;
     // assign sel_nextpc[3] = inst_jr;
+
+    assign final_inst = inst_filter;
 
     assign br_op = {
         inst_beq,
